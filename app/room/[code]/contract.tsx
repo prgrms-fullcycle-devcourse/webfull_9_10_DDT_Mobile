@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Check, Users, ShieldAlert, Play, LogOut } from 'lucide-react-native';
+import { ChevronLeft, Check, ShieldAlert, Play } from 'lucide-react-native';
 
 import { useRoom } from '../../../src/contexts/RoomContext';
 import { useSocket } from '../../../src/contexts/SocketContext';
@@ -14,6 +14,9 @@ import { useYjsContract } from '../../../src/hooks/useYjsContract';
 import { getRoomApi } from '../../../src/api/generated/room-api/room-api';
 import { getTimerApi } from '../../../src/api/generated/timer-api-타이머-및-세션-제어/timer-api-타이머-및-세션-제어';
 import axiosClient from '../../../src/api/axiosClient';
+
+import PenaltySettings from '../../../src/components/contract/PenaltySettings';
+import TierSettings from '../../../src/components/contract/TierSettings';
 
 export default function ContractScreen() {
   const router = useRouter();
@@ -36,13 +39,18 @@ export default function ContractScreen() {
   const signedCount = memberList.filter((m) => m.isSigned).length;
   const allSigned = memberList.length > 0 && signedCount === memberList.length;
 
-  const { fields, updateField, isConnected } = useYjsContract(
+  const { 
+    fields, updateField, 
+    tiers, addTier, updateTier, removeTier,
+    penalties, addPenalty, updatePenalty, removePenalty,
+    isConnected 
+  } = useYjsContract(
     room.code,
     !!me,
     isHost
   );
 
-  // 세션 시작 소켓 이벤트 리스너 (방장이 시작하면 다 같이 타이머로 이동)
+  // 세션 시작 소켓 이벤트 리스너
   useEffect(() => {
     if (!socket) return;
     const handleSessionStarted = () => {
@@ -90,7 +98,6 @@ export default function ContractScreen() {
       } else {
         await timerApi.timerControllerStartTimer(room.code);
       }
-      // 성공하면 소켓(session:started)을 통해 자동으로 화면이 넘어감
     } catch (err: any) {
       Alert.alert('시작 실패', err.response?.data?.message || '오류가 발생했습니다.');
       setIsStarting(false);
@@ -126,7 +133,7 @@ export default function ContractScreen() {
           </Text>
         </View>
 
-        {/* 타이머 설정 (Yjs 연동) */}
+        {/* 타이머 설정 */}
         <Text className="text-white/85 font-bold text-[15px] mb-3 ml-1">타이머 설정</Text>
         <View className="bg-[#111827] border border-white/10 rounded-2xl p-4 mb-6 gap-4">
           <View className="flex-row items-center justify-between">
@@ -161,6 +168,24 @@ export default function ContractScreen() {
           </View>
         </View>
 
+        {/* 벌칙 목록 설정 */}
+        <PenaltySettings
+          penalties={penalties}
+          addPenalty={addPenalty}
+          updatePenalty={updatePenalty}
+          removePenalty={removePenalty}
+          canEdit={canEdit}
+        />
+
+        {/* 벌칙 강도(티어) 설정 */}
+        <TierSettings
+          tiers={tiers}
+          addTier={addTier}
+          updateTier={updateTier}
+          removeTier={removeTier}
+          canEdit={canEdit}
+        />
+
         {/* 접속자 및 서명 현황 */}
         <View className="flex-row items-center justify-between mb-3 ml-1 pr-1">
           <Text className="text-white/85 font-bold text-[15px]">참여 멤버</Text>
@@ -172,7 +197,7 @@ export default function ContractScreen() {
             <View key={member.userId} className={`flex-row items-center justify-between p-4 ${index !== memberList.length - 1 ? 'border-b border-white/5' : ''}`}>
               <View className="flex-row items-center">
                 <View className={`w-10 h-10 rounded-full items-center justify-center border-2 ${member.isSigned ? 'border-[#10B981]' : 'border-white/20'} bg-[#1A1A2E]`}>
-                  {/* 임시 아바타 이모지 */}
+                  {/* 앱 환경이므로 임시로 이모지 출력 (추후 Image 컴포넌트로 교체 가능) */}
                   <Text className="text-lg">🐶</Text>
                 </View>
                 <View className="ml-3">
@@ -208,7 +233,6 @@ export default function ContractScreen() {
 
       {/* 하단 액션 버튼 영역 */}
       <View className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-3">
-        {/* 서명 토글 버튼 (모든 멤버) */}
         <Pressable
           onPress={handleSignToggle}
           className={`flex-1 py-4 rounded-2xl items-center border ${
@@ -220,7 +244,6 @@ export default function ContractScreen() {
           </Text>
         </Pressable>
 
-        {/* 방장 전용: 시작 버튼 */}
         {isHost && (
           <Pressable
             disabled={isStarting}
