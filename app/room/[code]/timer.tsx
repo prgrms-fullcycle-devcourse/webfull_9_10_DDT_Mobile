@@ -7,6 +7,7 @@ import { useSocket } from '../../../src/contexts/SocketContext';
 import { useAuthStore } from '../../../src/store/useAuthStore';
 import { useRoomStore } from '../../../src/store/useRoomStore';
 import { TimerProgressBar } from '../../../src/components/timer/TimerProgressBar';
+import { usePreventBack } from '../../../src/hooks/usePreventBack';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +31,11 @@ export default function TimerScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [timer, setTimer] = useState<TimerTick>({
     timeLeft: 0, mode: 'FOCUS', currentSession: 1, totalSessions: 1, focusDuration: 0, breakDuration: 0,
+  });
+
+  // 💡 안드로이드 하드웨어 뒤로가기 방어 및 모달 오픈
+  usePreventBack(() => {
+    setIsModalOpen(true);
   });
 
   useEffect(() => {
@@ -64,6 +70,8 @@ export default function TimerScreen() {
     return `${m}:${s}`;
   };
 
+  if (!me) return null;
+
   return (
     <SafeAreaView className="flex-1 bg-[#050816] items-center justify-between pb-8">
       <View className="w-full py-4 items-center">
@@ -73,7 +81,6 @@ export default function TimerScreen() {
       </View>
 
       <View className="items-center w-full flex-1 pt-6">
-        {/* 상단 진행바 컴포넌트 추가 */}
         <TimerProgressBar 
           mode={timer.mode}
           currentSession={timer.currentSession}
