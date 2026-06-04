@@ -1,12 +1,14 @@
-// app/mypage/edit.tsx
 import React, { useState } from 'react';
-import { View, Text, Pressable, TextInput, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Image, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { getUsers } from '../../src/api/generated/users-사용자/users-사용자';
 import axiosClient from '../../src/api/axiosClient';
+
+import { Button } from '../../src/components/ui/Button';
+import { Input } from '../../src/components/ui/Input';
 
 const PROFILE_OPTIONS = [
   { key: 'basic_image_key_01', src: require('../../assets/images/avatars/bear.png') },
@@ -62,17 +64,14 @@ export default function MyPageEditScreen() {
       </View>
 
       <View className="flex-1 px-6 pt-6 gap-8">
-        <View className="gap-2">
-          <Text className="text-white/85 font-bold text-[15px]">내 닉네임</Text>
-          <TextInput
-            className="bg-[#1A1A2E] text-white px-4 h-14 rounded-2xl border border-white/10"
-            placeholder="변경할 닉네임 (2~10자)"
-            placeholderTextColor="#6B7280"
-            maxLength={10}
-            value={nickname}
-            onChangeText={setNickname}
-          />
-        </View>
+        <Input
+          label="내 닉네임"
+          placeholder="변경할 닉네임 (2~10자)"
+          maxLength={10}
+          maxLengthIndicator
+          value={nickname}
+          onChangeText={setNickname}
+        />
 
         <View className="gap-3">
           <Text className="text-white/85 font-bold text-[15px]">프로필 이미지 선택</Text>
@@ -95,13 +94,13 @@ export default function MyPageEditScreen() {
 
         <View className="flex-1" />
 
-        <Pressable
-          disabled={!isValid || isSaving}
+        <Button
+          title="저장하기"
+          disabled={!isValid}
+          isLoading={isSaving}
           onPress={handleSave}
-          className={`w-full py-4 rounded-2xl items-center mb-4 ${isValid ? 'bg-[#7c3aed]' : 'bg-[#1F2937]'}`}
-        >
-          {isSaving ? <ActivityIndicator color="white" /> : <Text className={`font-bold text-base ${isValid ? 'text-white' : 'text-[#9CA3AF]'}`}>저장하기</Text>}
-        </Pressable>
+          className="mb-4"
+        />
       </View>
     </SafeAreaView>
   );

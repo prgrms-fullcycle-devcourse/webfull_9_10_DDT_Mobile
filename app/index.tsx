@@ -1,23 +1,21 @@
-import { View, Text, Pressable, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-// import { useAuthStore } from '../src/store/useAuthStore'; // 나중에 연결
+import { useAuthStore } from '../src/store/useAuthStore';
+import { Button } from '../src/components/ui/Button';
 
 export default function Home() {
   const router = useRouter();
   
-  // TODO: Zustand 완성 후 교체할 상태들
-  const isLoggedIn = false;
-  // const me = useAuthStore((state) => state.me);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const me = useAuthStore((state) => state.me);
 
   const handleOpenTerms = () => {
-    // 웹에서는 window.open을 썼지만, 앱에서는 모달 스크린이나 웹뷰로 이동해야 함
     Alert.alert('로그인', '구글 로그인 화면으로 이동합니다.');
-    // router.push('/terms');
   };
 
   const handleOpenCodeDialog = () => {
-    // 앱 내 모달 띄우기 (추후 구현)
     Alert.alert('방 코드 입력', '방 코드 입력 모달 띄우기');
   };
 
@@ -29,20 +27,27 @@ export default function Home() {
       <SafeAreaView className="flex-1 z-10 px-6 pb-8">
         {/* 우측 상단 로그인 / 마이페이지 버튼 */}
         <View className="flex-row justify-end pt-4">
-          {isLoggedIn ? (
-            <Pressable
-              className="border border-white/20 px-3 py-2 rounded-md"
+          {isLoggedIn && me?.role === 'user' ? (
+            <Button
+              title="마이페이지"
+              variant="outline"
+              className="px-3 py-2 w-auto rounded-md h-auto"
               onPress={() => router.push('/mypage')}
-            >
-              <Text className="text-white text-sm">마이페이지</Text>
-            </Pressable>
+            />
+          ) : isLoggedIn && me?.role === 'guest' ? (
+            <Button
+              title="로그아웃"
+              variant="outline"
+              className="px-3 py-2 w-auto rounded-md h-auto"
+              onPress={() => useAuthStore.getState().logout()}
+            />
           ) : (
-            <Pressable
-              className="border border-white/20 px-3 py-2 rounded-md"
+            <Button
+              title="로그인"
+              variant="outline"
+              className="px-3 py-2 w-auto rounded-md h-auto"
               onPress={handleOpenTerms}
-            >
-              <Text className="text-white text-sm">로그인</Text>
-            </Pressable>
+            />
           )}
         </View>
 
@@ -61,19 +66,17 @@ export default function Home() {
 
         {/* 하단 버튼 영역 */}
         <View className="gap-3">
-          <Pressable
-            className="w-full bg-[#242136] border border-[#914CFF] py-4 rounded-2xl items-center"
+          <Button
+            title="방 코드로 입장하기"
+            variant="secondary"
             onPress={handleOpenCodeDialog}
-          >
-            <Text className="text-white/90 font-bold text-base">방 코드로 입장하기</Text>
-          </Pressable>
+          />
 
-          <Pressable
-            className="w-full bg-white py-4 rounded-2xl items-center"
-            onPress={() => router.push('/room/create')} // 👈 나중에 만들 방 생성 페이지
-          >
-            <Text className="text-black font-bold text-base">방 만들기</Text>
-          </Pressable>
+          <Button
+            title="방 만들기"
+            variant="primary"
+            onPress={() => router.push('/room/create')}
+          />
         </View>
       </SafeAreaView>
     </View>

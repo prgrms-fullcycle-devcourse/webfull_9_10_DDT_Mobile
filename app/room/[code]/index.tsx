@@ -1,15 +1,17 @@
-// app/room/[code]/index.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, Alert, ActivityIndicator, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, Alert, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, EyeOff, ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import * as SecureStore from 'expo-secure-store';
 
 import { useAuthStore } from '../../../src/store/useAuthStore';
 import { getRoomApi } from '../../../src/api/generated/room-api/room-api';
 import axiosClient from '../../../src/api/axiosClient';
+
+import { Button } from '../../../src/components/ui/Button';
+import { Input } from '../../../src/components/ui/Input';
 
 const PROFILE_OPTIONS = [
   { key: 'basic_image_key_01', src: require('../../../assets/images/avatars/bear.png') },
@@ -34,7 +36,6 @@ export default function JoinRoom() {
 
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(0);
   const [isHost, setIsHost] = useState(false);
 
@@ -116,12 +117,12 @@ export default function JoinRoom() {
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-white text-base font-bold mb-2">존재하지 않거나 종료된 방이에요.</Text>
           <Text className="text-white/50 text-sm mb-6">방 코드를 다시 확인해주세요.</Text>
-          <Pressable
+          <Button
+            title="홈으로"
+            variant="primary"
             onPress={() => router.replace('/')}
-            className="w-full bg-[#7c3aed] py-4 rounded-2xl items-center"
-          >
-            <Text className="text-white font-bold text-base">홈으로</Text>
-          </Pressable>
+            className="w-full"
+          />
         </View>
       </SafeAreaView>
     );
@@ -137,20 +138,15 @@ export default function JoinRoom() {
       </View>
 
       <View className="flex-1 px-6 pt-4 gap-6">
-        <View className="gap-2">
-          <Text className="text-white/85 font-bold text-[15px]">내 닉네임</Text>
-          <TextInput
-            className="bg-[#1A1A2E] text-white px-4 h-14 rounded-2xl border border-white/10"
-            placeholder="방에서 사용할 닉네임을 입력해주세요"
-            placeholderTextColor="#6B7280"
-            maxLength={10}
-            value={nickname}
-            onChangeText={setNickname}
-          />
-          <Text className="text-[#6B7280] text-xs text-right">{nickname.length}/10</Text>
-        </View>
+        <Input
+          label="내 닉네임"
+          placeholder="방에서 사용할 닉네임을 입력해주세요"
+          maxLength={10}
+          maxLengthIndicator
+          value={nickname}
+          onChangeText={setNickname}
+        />
 
-        {/* 💡 가로 스크롤이 가능한 실제 이미지 프로필 선택 영역 */}
         <View className="gap-3">
           <Text className="text-white/85 font-bold text-[15px]">프로필 선택</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible pb-2">
@@ -171,45 +167,28 @@ export default function JoinRoom() {
         </View>
 
         {!isHost && (
-          <View className="gap-2">
-            <Text className="text-white/85 font-bold text-[15px]">방 비밀번호</Text>
-            <View className="relative justify-center">
-              <TextInput
-                className="bg-[#1A1A2E] text-white px-4 pr-12 h-14 rounded-2xl border border-white/10"
-                placeholder="비밀번호를 입력해주세요"
-                placeholderTextColor="#6B7280"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <Pressable
-                className="absolute right-4"
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff color="#6B7280" size={20} /> : <Eye color="#6B7280" size={20} />}
-              </Pressable>
-            </View>
-            <Text className="text-[#6B7280] text-xs ml-1">· 비밀번호는 4~12자이어야 합니다.</Text>
+          <View>
+            <Input
+              label="방 비밀번호"
+              placeholder="비밀번호를 입력해주세요"
+              isPassword
+              maxLength={12}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Text className="text-[#6B7280] text-xs ml-1 mt-1">· 비밀번호는 4~12자이어야 합니다.</Text>
           </View>
         )}
 
         <View className="flex-1" />
 
-        <Pressable
-          disabled={!isValid || joinMutation.isPending}
+        <Button
+          title="입장하기"
+          disabled={!isValid}
+          isLoading={joinMutation.isPending}
           onPress={handleSubmit}
-          className={`w-full py-4 rounded-2xl items-center mb-4 ${
-            isValid && !joinMutation.isPending ? 'bg-[#7c3aed]' : 'bg-[#1F2937]'
-          }`}
-        >
-          {joinMutation.isPending ? (
-            <ActivityIndicator color="#9CA3AF" />
-          ) : (
-            <Text className={`font-bold text-base ${isValid ? 'text-white' : 'text-[#9CA3AF]'}`}>
-              입장하기
-            </Text>
-          )}
-        </Pressable>
+          className="mb-4"
+        />
       </View>
     </SafeAreaView>
   );
