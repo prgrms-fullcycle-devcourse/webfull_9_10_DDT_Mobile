@@ -1,6 +1,5 @@
-// app/room/[code]/contract.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, ShieldAlert, Play } from 'lucide-react-native';
@@ -37,6 +36,7 @@ export default function ContractScreen() {
   const isHost = me?.id === hostId;
   const myMember = me ? members[me.id] : undefined;
   const isMeSigned = myMember?.isSigned ?? false;
+  const canEdit = myMember?.canEdit ?? false;
 
   const memberList = Object.values(members);
   const signedCount = memberList.filter((m) => m.isSigned).length;
@@ -101,17 +101,28 @@ export default function ContractScreen() {
       } else {
         await timerApi.timerControllerStartTimer(room.code);
       }
-    } catch (err: any) {
-      Alert.alert('시작 실패', err.response?.data?.message || '오류가 발생했습니다.');
+    } catch (_err: any) {
+      Alert.alert('시작 실패', _err.response?.data?.message || '오류가 발생했습니다.');
       setIsStarting(false);
     }
   };
 
   if (!me) return null;
 
+  // 총 예상 시간 계산
+  const { focusMin, breakMin, rounds } = fields;
+  const totalMin = focusMin * rounds + breakMin * Math.max(0, rounds - 1);
+  const formatTime = (minutes: number): string => {
+    if (minutes === 0) return '0분';
+    if (minutes < 60) return `${minutes}분`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins === 0 ? `${hours}시간` : `${hours}시간 ${mins}분`;
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-[#050816]">
-      {/* 💡 헤더 영역 개선: 저장/불러오기 버튼 연동 */}
+      {/* 헤더 영역 */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10">
         <View className="flex-row items-center">
           <Pressable onPress={handleLeaveRoom} className="p-2">
@@ -121,7 +132,7 @@ export default function ContractScreen() {
         </View>
         
         <View className="flex-row items-center gap-2">
-          {/* 연결 상태 뱃지를 작은 점으로 축소하여 공간 확보 */}
+          {/* 연결 상태 뱃지 */}
           <View className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
           
           <ContractActions
@@ -134,7 +145,7 @@ export default function ContractScreen() {
       </View>
 
       <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
-        {/* ... (이하 기존 코드 동일) ... */}
+        
         <View className="bg-[#111827] border border-white/10 rounded-2xl p-5 mb-4">
           <Text className="text-white text-xl font-bold mb-1">{room.title}</Text>
           <Text className="text-white/50 text-sm mb-4">방 코드: {room.code}</Text>
@@ -145,12 +156,62 @@ export default function ContractScreen() {
 
         {isHost && <EditPermissionToggle />}
 
+        {/* 💡 복구된 타이머 설정 영역 */}
+        <View className="mb-6 mt-2">
+          <Text className="text-white/85 font-bold text-[15px] mb-3 ml-1">타이머 설정</Text>
+          <View className="bg-[#111827] border border-white/10 rounded-2xl p-4 gap-4">
+            
+            <View className="flex-row items-center justify-between">
+              <Text className="text-white/80 font-medium">집중 시간 (분)</Text>
+              <TextInput
+                className={`bg-[#1A1A2E] text-white px-4 h-12 w-24 rounded-xl text-center border border-white/10 ${!canEdit ? 'opacity-50' : ''}`}
+                keyboardType="number-pad"
+                value={String(fields.focusMin || '')}
+                onChangeText={(val) => updateField('focusMin', parseInt(val) || 0)}
+                editable={canEdit}
+              />
+            </View>
+            
+            <View className="flex-row items-center justify-between">
+              <Text className="text-white/80 font-medium">휴식 시간 (분)</Text>
+              <TextInput
+                className={`bg-[#1A1A2E] text-white px-4 h-12 w-24 rounded-xl text-center border border-white/10 ${!canEdit ? 'opacity-50' : ''}`}
+                keyboardType="number-pad"
+                value={String(fields.breakMin || '')}
+                onChangeText={(val) => updateField('breakMin', parseInt(val) || 0)}
+                editable={canEdit}
+              />
+            </View>
+            
+            <View className="flex-row items-center justify-between">
+              <Text className="text-white/80 font-medium">반복 횟수 (회)</Text>
+              <TextInput
+                className={`bg-[#1A1A2E] text-white px-4 h-12 w-24 rounded-xl text-center border border-white/10 ${!canEdit ? 'opacity-50' : ''}`}
+                keyboardType="number-pad"
+                value={String(fields.rounds || '')}
+                onChangeText={(val) => updateField('rounds', parseInt(val) || 0)}
+                editable={canEdit}
+              />
+            </View>
+
+            <View className="border-t border-white/10 my-1" />
+            
+            <View className="flex-row items-center justify-between">
+              <Text className="text-white/80 font-medium">총 예상 시간</Text>
+              <Text className="text-[#7c3aed] text-xl font-extrabold pr-1">
+                {formatTime(totalMin)}
+              </Text>
+            </View>
+
+          </View>
+        </View>
+
         <PenaltySettings
           penalties={penalties}
           addPenalty={addPenalty}
           updatePenalty={updatePenalty}
           removePenalty={removePenalty}
-          canEdit={myMember?.canEdit ?? false}
+          canEdit={canEdit}
         />
 
         <TierSettings
@@ -158,12 +219,13 @@ export default function ContractScreen() {
           addTier={addTier}
           updateTier={updateTier}
           removeTier={removeTier}
-          canEdit={myMember?.canEdit ?? false}
+          canEdit={canEdit}
         />
 
         <MemberSignList />
       </ScrollView>
 
+      {/* 하단 액션 버튼 영역 */}
       <View className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-3">
         <Pressable
           onPress={handleSignToggle}

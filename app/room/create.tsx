@@ -1,3 +1,4 @@
+// app/room/create.tsx
 import React, { useState } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -62,6 +63,13 @@ function CreateRoomComplete({
             {roomCode}
           </Text>
         </View>
+
+        <View className='border-t border-white/10' />
+
+        <View>
+          <Text className='text-xs text-[#6B7280] mb-1'>초대 링크</Text>
+          <Text className='text-xs text-[#8B5CF6] mt-1'>{inviteLink}</Text>
+        </View>
       </View>
 
       <View className='flex-row items-start gap-2 mt-4 bg-white/5 p-3 rounded-lg'>
@@ -90,6 +98,7 @@ export default function CreateRoom() {
   const [roomName, setRoomName] = useState('');
   const [password, setPassword] = useState('');
   const [roomCode, setRoomCode] = useState('');
+  const [inviteLink, setInviteLink] = useState(''); // 💡 백엔드에서 받은 링크 저장용 상태
 
   const isValid = roomName.trim().length > 0 && password.length >= 4 && password.length <= 12;
 
@@ -100,6 +109,7 @@ export default function CreateRoom() {
     },
     onSuccess: async (data) => {
       setRoomCode(data.code);
+      setInviteLink(data.url); // 💡 하드코딩 대신 API가 준 URL 사용
       await SecureStore.setItemAsync(`isHost:${data.code}`, 'true');
       await SecureStore.setItemAsync(`hostPassword:${data.code}`, password);
       setStep('complete');
@@ -116,7 +126,7 @@ export default function CreateRoom() {
   };
 
   const handleCopyAll = async () => {
-    const inviteLink = `https://ddt-app.com/room/${roomCode}`;
+    // 💡 원하시는 텍스트 포맷으로 복사되도록 수정
     const text = `[${roomName}] 에 초대합니다\n비밀번호 : ${password}\n방 코드 : ${roomCode}\n입장 링크 : ${inviteLink}`;
     await Clipboard.setStringAsync(text);
     Alert.alert('복사 완료', '초대 정보가 클립보드에 복사되었어요!');
@@ -217,7 +227,7 @@ export default function CreateRoom() {
               roomName={roomName}
               password={password}
               roomCode={roomCode}
-              inviteLink={`https://ddt-app.com/room/${roomCode}`}
+              inviteLink={inviteLink}
               onCopyAll={handleCopyAll}
             />
 

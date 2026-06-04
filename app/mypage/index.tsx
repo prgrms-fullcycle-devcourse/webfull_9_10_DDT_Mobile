@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronRight, ChevronLeft, Settings, LogOut, Clock } from 'lucide-react-native';
+import { ChevronRight, ChevronLeft, Settings, LogOut} from 'lucide-react-native';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { getUsers } from '../../src/api/generated/users-사용자/users-사용자';
 import axiosClient from '../../src/api/axiosClient';
