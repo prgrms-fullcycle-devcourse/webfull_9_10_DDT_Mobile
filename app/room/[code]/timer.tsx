@@ -1,4 +1,3 @@
-// app/room/[code]/timer.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +6,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useSocket } from '../../../src/contexts/SocketContext';
 import { useAuthStore } from '../../../src/store/useAuthStore';
 import { useRoomStore } from '../../../src/store/useRoomStore';
+import { TimerProgressBar } from '../../../src/components/timer/TimerProgressBar';
 
 const { width } = Dimensions.get('window');
 
@@ -39,7 +39,6 @@ export default function TimerScreen() {
     return () => { socket.off('timer:tick', handleTick); };
   }, [socket]);
 
-  // Phase 변경 감지하여 자동으로 결과 화면으로 이동
   useEffect(() => {
     if (phase === 'result') router.replace(`/room/${code}/semi-result`);
   }, [phase, code, router]);
@@ -53,7 +52,6 @@ export default function TimerScreen() {
   const totalDuration = isFocus ? timer.focusDuration : timer.breakDuration;
   const displayTime = Math.max(0, timer.timeLeft);
   
-  // 원형 타이머 계산
   const radius = width * 0.35;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = totalDuration > 0 
@@ -74,9 +72,19 @@ export default function TimerScreen() {
         </Text>
       </View>
 
-      <View className="items-center justify-center flex-1">
-        {/* 원형 타이머 (SVG) */}
-        <View className="relative items-center justify-center -rotate-90">
+      <View className="items-center w-full flex-1 pt-6">
+        {/* 상단 진행바 컴포넌트 추가 */}
+        <TimerProgressBar 
+          mode={timer.mode}
+          currentSession={timer.currentSession}
+          totalSessions={timer.totalSessions}
+          timeLeft={timer.timeLeft}
+          totalDuration={totalDuration}
+          focusDuration={timer.focusDuration}
+          breakDuration={timer.breakDuration}
+        />
+
+        <View className="relative items-center justify-center -rotate-90 mt-10">
           <Svg width={radius * 2 + 40} height={radius * 2 + 40}>
             <Circle cx={radius + 20} cy={radius + 20} r={radius} stroke="rgba(255,255,255,0.12)" strokeWidth="12" fill="none" />
             <Circle 
@@ -94,21 +102,21 @@ export default function TimerScreen() {
 
       <View className="w-full px-6">
         <Pressable onPress={() => setIsModalOpen(true)} className="w-full py-4 bg-transparent border border-white/20 rounded-2xl items-center">
-          <Text className="text-white/60 font-bold">중도 포기</Text>
+          <Text className="text-white/60 font-bold text-base">중도 포기</Text>
         </Pressable>
       </View>
 
       <Modal visible={isModalOpen} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center items-center px-6">
-          <View className="bg-[#1E2538] w-full rounded-2xl p-6">
+          <View className="bg-[#1E2538] w-full rounded-3xl p-6">
             <Text className="text-white text-lg font-bold mb-2">포기하면 남은 시간이{"\n"}모두 이탈 시간으로 처리돼요.</Text>
-            <Text className="text-white/50 text-sm mb-6">가장 많은 벌칙을 받게 됩니다.</Text>
+            <Text className="text-white/50 text-sm mb-8">가장 많은 벌칙을 받게 됩니다.</Text>
             <View className="flex-row gap-3">
               <Pressable onPress={handleForfeit} className="flex-1 bg-[#F85A5A] py-4 rounded-xl items-center">
-                <Text className="text-white font-bold">포기하기</Text>
+                <Text className="text-white font-bold text-base">포기하기</Text>
               </Pressable>
               <Pressable onPress={() => setIsModalOpen(false)} className="flex-1 bg-[#2A314A] py-4 rounded-xl items-center">
-                <Text className="text-white font-bold">취소</Text>
+                <Text className="text-white font-bold text-base">취소</Text>
               </Pressable>
             </View>
           </View>

@@ -1,9 +1,8 @@
-// app/room/[code]/contract.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Check, ShieldAlert, Play } from 'lucide-react-native';
+import { ChevronLeft, ShieldAlert, Play } from 'lucide-react-native';
 
 import { useRoom } from '../../../src/contexts/RoomContext';
 import { useSocket } from '../../../src/contexts/SocketContext';
@@ -17,6 +16,9 @@ import axiosClient from '../../../src/api/axiosClient';
 
 import PenaltySettings from '../../../src/components/contract/PenaltySettings';
 import TierSettings from '../../../src/components/contract/TierSettings';
+// 새롭게 만든 컴포넌트 임포트!
+import EditPermissionToggle from '../../../src/components/contract/EditPermissionToggle';
+import MemberSignList from '../../../src/components/contract/MemberSignList';
 
 export default function ContractScreen() {
   const router = useRouter();
@@ -32,7 +34,6 @@ export default function ContractScreen() {
 
   const isHost = me?.id === hostId;
   const myMember = me ? members[me.id] : undefined;
-  const canEdit = myMember?.canEdit ?? false;
   const isMeSigned = myMember?.isSigned ?? false;
 
   const memberList = Object.values(members);
@@ -50,7 +51,6 @@ export default function ContractScreen() {
     isHost
   );
 
-  // 세션 시작 소켓 이벤트 리스너
   useEffect(() => {
     if (!socket) return;
     const handleSessionStarted = () => {
@@ -108,7 +108,6 @@ export default function ContractScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816]">
-      {/* 헤더 */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10">
         <View className="flex-row items-center">
           <Pressable onPress={handleLeaveRoom} className="p-2">
@@ -124,7 +123,6 @@ export default function ContractScreen() {
       </View>
 
       <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
-        {/* 방 정보 */}
         <View className="bg-[#111827] border border-white/10 rounded-2xl p-5 mb-4">
           <Text className="text-white text-xl font-bold mb-1">{room.title}</Text>
           <Text className="text-white/50 text-sm mb-4">방 코드: {room.code}</Text>
@@ -133,105 +131,29 @@ export default function ContractScreen() {
           </Text>
         </View>
 
-        {/* 타이머 설정 */}
-        <Text className="text-white/85 font-bold text-[15px] mb-3 ml-1">타이머 설정</Text>
-        <View className="bg-[#111827] border border-white/10 rounded-2xl p-4 mb-6 gap-4">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-white/80">집중 시간 (분)</Text>
-            <TextInput
-              className={`bg-[#1A1A2E] text-white px-4 h-12 w-24 rounded-xl text-center ${!canEdit ? 'opacity-50' : ''}`}
-              keyboardType="number-pad"
-              value={String(fields.focusMin || '')}
-              onChangeText={(val) => updateField('focusMin', parseInt(val) || 0)}
-              editable={canEdit}
-            />
-          </View>
-          <View className="flex-row items-center justify-between">
-            <Text className="text-white/80">휴식 시간 (분)</Text>
-            <TextInput
-              className={`bg-[#1A1A2E] text-white px-4 h-12 w-24 rounded-xl text-center ${!canEdit ? 'opacity-50' : ''}`}
-              keyboardType="number-pad"
-              value={String(fields.breakMin || '')}
-              onChangeText={(val) => updateField('breakMin', parseInt(val) || 0)}
-              editable={canEdit}
-            />
-          </View>
-          <View className="flex-row items-center justify-between">
-            <Text className="text-white/80">반복 횟수 (회)</Text>
-            <TextInput
-              className={`bg-[#1A1A2E] text-white px-4 h-12 w-24 rounded-xl text-center ${!canEdit ? 'opacity-50' : ''}`}
-              keyboardType="number-pad"
-              value={String(fields.rounds || '')}
-              onChangeText={(val) => updateField('rounds', parseInt(val) || 0)}
-              editable={canEdit}
-            />
-          </View>
-        </View>
+        {/* 편집 권한 토글 공통 컴포넌트 */}
+        {isHost && <EditPermissionToggle />}
 
-        {/* 벌칙 목록 설정 */}
         <PenaltySettings
           penalties={penalties}
           addPenalty={addPenalty}
           updatePenalty={updatePenalty}
           removePenalty={removePenalty}
-          canEdit={canEdit}
+          canEdit={myMember?.canEdit ?? false}
         />
 
-        {/* 벌칙 강도(티어) 설정 */}
         <TierSettings
           tiers={tiers}
           addTier={addTier}
           updateTier={updateTier}
           removeTier={removeTier}
-          canEdit={canEdit}
+          canEdit={myMember?.canEdit ?? false}
         />
 
-        {/* 접속자 및 서명 현황 */}
-        <View className="flex-row items-center justify-between mb-3 ml-1 pr-1">
-          <Text className="text-white/85 font-bold text-[15px]">참여 멤버</Text>
-          <Text className="text-[#10B981] font-bold">{signedCount} / {memberList.length}명 서명 완료</Text>
-        </View>
-        
-        <View className="bg-[#111827] border border-white/10 rounded-2xl overflow-hidden mb-8">
-          {memberList.map((member, index) => (
-            <View key={member.userId} className={`flex-row items-center justify-between p-4 ${index !== memberList.length - 1 ? 'border-b border-white/5' : ''}`}>
-              <View className="flex-row items-center">
-                <View className={`w-10 h-10 rounded-full items-center justify-center border-2 ${member.isSigned ? 'border-[#10B981]' : 'border-white/20'} bg-[#1A1A2E]`}>
-                  {/* 앱 환경이므로 임시로 이모지 출력 (추후 Image 컴포넌트로 교체 가능) */}
-                  <Text className="text-lg">🐶</Text>
-                </View>
-                <View className="ml-3">
-                  <View className="flex-row items-center">
-                    <Text className={`font-bold ${member.userId === me.id ? 'text-[#7c3aed]' : 'text-white'}`}>
-                      {member.nickname} {member.userId === me.id && '(나)'}
-                    </Text>
-                    {member.isHost && (
-                      <View className="ml-2 bg-yellow-500/20 px-1.5 py-0.5 rounded">
-                        <Text className="text-yellow-500 text-[10px] font-bold">방장</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text className="text-xs text-white/40 mt-1">
-                    {member.connected ? '온라인' : '오프라인'}
-                  </Text>
-                </View>
-              </View>
-              {member.isSigned ? (
-                <View className="bg-[#10B981]/20 px-3 py-1.5 rounded-full flex-row items-center">
-                  <Check color="#10B981" size={14} />
-                  <Text className="text-[#10B981] text-xs font-bold ml-1">준비 완료</Text>
-                </View>
-              ) : (
-                <View className="bg-white/10 px-3 py-1.5 rounded-full">
-                  <Text className="text-white/40 text-xs font-bold">서명 대기</Text>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
+        {/* 서명 리스트 공통 컴포넌트 */}
+        <MemberSignList />
       </ScrollView>
 
-      {/* 하단 액션 버튼 영역 */}
       <View className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-3">
         <Pressable
           onPress={handleSignToggle}
@@ -252,16 +174,10 @@ export default function ContractScreen() {
               allSigned ? 'bg-[#7c3aed]' : 'bg-[#EF4444]'
             }`}
           >
-            {isStarting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <>
-                {allSigned ? <Play color="white" size={18} /> : <ShieldAlert color="white" size={18} />}
-                <Text className="font-bold text-base text-white ml-2">
-                  {allSigned ? '집중 시작' : '강제 시작'}
-                </Text>
-              </>
-            )}
+            {allSigned ? <Play color="white" size={18} /> : <ShieldAlert color="white" size={18} />}
+            <Text className="font-bold text-base text-white ml-2">
+              {allSigned ? '집중 시작' : '강제 시작'}
+            </Text>
           </Pressable>
         )}
       </View>
