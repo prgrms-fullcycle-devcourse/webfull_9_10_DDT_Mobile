@@ -8,8 +8,8 @@ import { X } from 'lucide-react-native';
 import { getRouletteApi } from '../../../src/api/generated/roulette-api-벌칙-룰렛/roulette-api-벌칙-룰렛';
 import { getResultApi } from '../../../src/api/generated/result-api-결과-조회/result-api-결과-조회';
 import axiosClient from '../../../src/api/axiosClient';
-// 네이티브 룰렛 임포트
 import { PenaltyRoulette } from '../../../src/components/ui/CustomRoulette';
+import { usePreventBack } from '../../../src/hooks/usePreventBack';
 
 export default function RouletteScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -19,6 +19,15 @@ export default function RouletteScreen() {
   const [resultPenalty, setResultPenalty] = useState<string | null>(null);
   const [spinCount, setSpinCount] = useState(0);
   const [targetIndex, setTargetIndex] = useState(0);
+
+  // 💡 룰렛이 돌아가고 있을 때 뒤로가기 차단
+  usePreventBack(() => {
+    if (isSpinning) {
+      console.log('룰렛이 회전 중에는 나갈 수 없습니다.');
+    } else {
+      router.replace(`/room/${code}/total-result`);
+    }
+  });
 
   const { data: resultData } = useQuery({
     queryKey: ['result', code],
@@ -33,7 +42,6 @@ export default function RouletteScreen() {
       return res.data as any;
     },
     onSuccess: (data) => {
-      // 서버에서 당첨된 벌칙이 리스트의 몇 번째인지 인덱스 찾기
       const index = penaltyItems.findIndex((item: string) => item === data.penaltyContent);
       setTargetIndex(index !== -1 ? index : 0);
       setIsSpinning(true);
@@ -60,14 +68,16 @@ export default function RouletteScreen() {
       <View className="flex-row items-center justify-between px-4 py-4">
         <View className="w-8" />
         <Text className="text-white text-lg font-bold">벌칙 뽑기</Text>
-        <Pressable onPress={() => router.replace(`/room/${code}/total-result`)}>
-          <X color="white" />
+        <Pressable 
+          disabled={isSpinning} 
+          onPress={() => router.replace(`/room/${code}/total-result`)}
+        >
+          <X color={isSpinning ? "gray" : "white"} />
         </Pressable>
       </View>
 
       <View className="flex-1 items-center justify-center px-6">
         <View className="w-full bg-[#111827] border border-white/10 rounded-3xl items-center justify-center overflow-hidden py-8">
-          {/* 네이티브 룰렛 적용 */}
           <PenaltyRoulette 
             mustStartSpinning={isSpinning}
             targetIndex={targetIndex}

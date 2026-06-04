@@ -1,4 +1,3 @@
-// src/hooks/useYjsContract.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -33,6 +32,14 @@ export interface AwarenessState {
   [key: string]: unknown;
 }
 
+// 💡 불러오기 데이터 인터페이스 추가
+export interface ApplyData {
+  fields?: ContractFields;
+  tiers?: Tier[];
+  penalties?: Penalty[];
+  penaltyMode?: 'replace' | 'append';
+}
+
 export interface UseContractYjsReturn {
   fields: ContractFields;
   fieldOwners: Record<string, FocusedField>;
@@ -48,6 +55,7 @@ export interface UseContractYjsReturn {
   removePenalty: (index: number) => void;
   handleFocus: (fieldKey: string, userId: string, nickname: string) => void;
   handleBlur: () => void;
+  applyAll: (data: ApplyData) => void; // 💡 타입 추가
 }
 
 function generateColor(userId: string): string {
@@ -84,7 +92,6 @@ export function useYjsContract(
     const yjsTiers = doc.getArray<Tier>('tiers');
     const yjsPenalties = doc.getArray<Penalty>('penalties');
 
-    // Expo 환경변수에서 도메인 추출 후 ws 프로토콜로 변경
     const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://192.168.0.x:8080';
     const serverUrl = `${apiDomain}/yjs?roomCode=${roomCode}`;
 
@@ -231,6 +238,43 @@ export function useYjsContract(
     });
   }, []);
 
+  // 💡 복구된 계약서 불러오기 (applyAll) 함수
+  const applyAll = useCallback((data: ApplyData) => {
+    const doc = docRef.current;
+    if (!doc) return;
+
+    doc.transact(() => {
+      if (data.fields) {
+        const yjsFields = doc.getMap<number>('fields');
+        yjsFields.set('focusMin', data.fields.focusMin);
+        yjsFields.set('breakMin', data.fields.breakMin);
+        yjsFields.set('rounds', data.fields.rounds);
+      }
+
+      if (data.tiers) {
+        const yjsTiers = doc.getArray<Tier>('tiers');
+        if (yjsTiers.length > 0) yjsTiers.delete(0, yjsTiers.length);
+        if (data.tiers.length > 0) yjsTiers.insert(0, data.tiers);
+      }
+
+      if (data.penalties) {
+        const yjsPenalties = doc.getArray<Penalty>('penalties');
+        const mode = data.penaltyMode ?? 'replace';
+
+        if (mode === 'replace') {
+          if (yjsPenalties.length > 0) yjsPenalties.delete(0, yjsPenalties.length);
+          if (data.penalties.length > 0) yjsPenalties.insert(0, data.penalties);
+        } else {
+          const newPenalties = data.penalties.map((p) => ({
+            ...p,
+            id: Math.random().toString(36).substring(7),
+          }));
+          if (newPenalties.length > 0) yjsPenalties.push(newPenalties);
+        }
+      }
+    });
+  }, []);
+
   return {
     fields,
     fieldOwners,
@@ -246,5 +290,6 @@ export function useYjsContract(
     removePenalty,
     handleFocus,
     handleBlur,
+    applyAll, 
   };
 }
