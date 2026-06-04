@@ -1,3 +1,4 @@
+// app/room/[code]/contract.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,9 +17,10 @@ import axiosClient from '../../../src/api/axiosClient';
 
 import PenaltySettings from '../../../src/components/contract/PenaltySettings';
 import TierSettings from '../../../src/components/contract/TierSettings';
-// 새롭게 만든 컴포넌트 임포트!
 import EditPermissionToggle from '../../../src/components/contract/EditPermissionToggle';
 import MemberSignList from '../../../src/components/contract/MemberSignList';
+
+import { ContractActions } from '../../../src/components/contract/ContractActions';
 
 export default function ContractScreen() {
   const router = useRouter();
@@ -44,7 +46,8 @@ export default function ContractScreen() {
     fields, updateField, 
     tiers, addTier, updateTier, removeTier,
     penalties, addPenalty, updatePenalty, removePenalty,
-    isConnected 
+    isConnected,
+    applyAll
   } = useYjsContract(
     room.code,
     !!me,
@@ -108,21 +111,30 @@ export default function ContractScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816]">
+      {/* 💡 헤더 영역 개선: 저장/불러오기 버튼 연동 */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10">
         <View className="flex-row items-center">
           <Pressable onPress={handleLeaveRoom} className="p-2">
             <ChevronLeft color="white" size={28} />
           </Pressable>
-          <Text className="text-white text-lg font-bold ml-2">계약서 작성</Text>
+          <Text className="text-white text-lg font-bold ml-1">계약서 작성</Text>
         </View>
-        <View className={`px-2 py-1 rounded-md ${isConnected ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-          <Text className={`text-xs font-bold ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-            {isConnected ? '실시간 연동중' : '연결 끊김'}
-          </Text>
+        
+        <View className="flex-row items-center gap-2">
+          {/* 연결 상태 뱃지를 작은 점으로 축소하여 공간 확보 */}
+          <View className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+          
+          <ContractActions
+            fields={fields}
+            tiers={tiers}
+            penalties={penalties}
+            applyAll={applyAll}
+          />
         </View>
       </View>
 
       <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
+        {/* ... (이하 기존 코드 동일) ... */}
         <View className="bg-[#111827] border border-white/10 rounded-2xl p-5 mb-4">
           <Text className="text-white text-xl font-bold mb-1">{room.title}</Text>
           <Text className="text-white/50 text-sm mb-4">방 코드: {room.code}</Text>
@@ -131,7 +143,6 @@ export default function ContractScreen() {
           </Text>
         </View>
 
-        {/* 편집 권한 토글 공통 컴포넌트 */}
         {isHost && <EditPermissionToggle />}
 
         <PenaltySettings
@@ -150,7 +161,6 @@ export default function ContractScreen() {
           canEdit={myMember?.canEdit ?? false}
         />
 
-        {/* 서명 리스트 공통 컴포넌트 */}
         <MemberSignList />
       </ScrollView>
 
