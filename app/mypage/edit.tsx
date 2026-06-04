@@ -45,7 +45,7 @@ export default function MyPageEditScreen() {
       });
       await fetchMe();
       Alert.alert('성공', '프로필이 수정되었습니다.', [{ text: '확인', onPress: () => router.back() }]);
-    } catch (err) {
+    } catch (_err) {
       Alert.alert('오류', '프로필 수정에 실패했습니다.');
     } finally {
       setIsSaving(false);

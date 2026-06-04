@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TextInput, Alert, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, Check } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 
 import { getRuleApi } from '../../api/generated/rule-api-계약서-관리/rule-api-계약서-관리';
 import axiosClient from '../../api/axiosClient';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useRoomStore } from '../../store/useRoomStore';
-import { UseContractYjsReturn, ApplyData } from '../../hooks/useYjsContract';
+import { UseContractYjsReturn } from '../../hooks/useYjsContract';
 import { toBackendFormat, toYjsFormat, SavedRule } from '../../lib/contractTransform';
 import { Button } from '../ui/Button';
 

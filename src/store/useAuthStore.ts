@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         },
         isLoggedIn: true,
       });
-    } catch (error) {
+    } catch (_error) {
       set({ isLoggedIn: false, me: null });
     }
   },
