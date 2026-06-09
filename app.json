@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "ddt-mobile",
+    "slug": "ddt-mobile",
+    "version": "1.0.0",
+    "scheme": "ddt",
+    "ios": {
+      "bundleIdentifier": "com.ddt.mobile" 
+    },
+    "android": {
+      "package": "com.ddt.mobile"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

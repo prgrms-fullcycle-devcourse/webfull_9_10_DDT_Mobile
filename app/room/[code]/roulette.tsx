@@ -10,6 +10,7 @@ import { getResultApi } from '../../../src/api/generated/result-api-결과-조�
 import axiosClient from '../../../src/api/axiosClient';
 import { PenaltyRoulette } from '../../../src/components/ui/CustomRoulette';
 import { usePreventBack } from '../../../src/hooks/usePreventBack';
+import { Button } from '../../../src/components/ui/Button';
 
 export default function RouletteScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -95,17 +96,12 @@ export default function RouletteScreen() {
       </View>
 
       <View className="p-6 pb-8">
-        <Pressable 
+        <Button 
+          title={spinMutation.isPending ? '뽑는 중...' : '벌칙 뽑기'}
           disabled={isSpinning || spinMutation.isPending}
+          isLoading={spinMutation.isPending}
           onPress={handleSpin}
-          className={`w-full py-4 rounded-2xl items-center ${isSpinning ? 'bg-white/20' : 'bg-[#7c3aed]'}`}
-        >
-          {spinMutation.isPending ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className="text-white font-bold text-base">{isSpinning ? '뽑는 중...' : '벌칙 뽑기'}</Text>
-          )}
-        </Pressable>
+        />
       </View>
     </SafeAreaView>
   );

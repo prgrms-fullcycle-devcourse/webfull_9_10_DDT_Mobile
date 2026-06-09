@@ -42,3 +42,7 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# 안드로이드 및 iOS 네이티브 폴더 무시
+/ios
+/android

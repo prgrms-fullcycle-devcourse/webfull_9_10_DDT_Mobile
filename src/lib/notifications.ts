@@ -1,11 +1,13 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants'; // 💡 추가
 import { Platform } from 'react-native';
 
-// 앱이 실행 중(Foreground)일 때 알림이 오면 어떻게 보여줄지 설정
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -13,6 +15,12 @@ Notifications.setNotificationHandler({
 
 export async function getDevicePushTokenAsync() {
   let token;
+
+  // 💡 Expo Go 환경인지 체크하여, Expo Go일 경우 토큰 발급을 시도하지 않고 건너뜁니다.
+  if (Constants.appOwnership === 'expo') {
+    console.log('Expo Go 환경에서는 푸시 알림 토큰 발급을 지원하지 않습니다.');
+    return null;
+  }
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -38,7 +46,6 @@ export async function getDevicePushTokenAsync() {
     }
 
     try {
-      // 💡 AWS SNS를 위해 Expo 토큰이 아닌 "원시 기기 토큰(Device Push Token)"을 발급받습니다.
       const tokenData = await Notifications.getDevicePushTokenAsync();
       token = tokenData.data;
     } catch (e) {

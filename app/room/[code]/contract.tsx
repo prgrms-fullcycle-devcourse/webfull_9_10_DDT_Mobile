@@ -18,7 +18,7 @@ import PenaltySettings from '../../../src/components/contract/PenaltySettings';
 import TierSettings from '../../../src/components/contract/TierSettings';
 import EditPermissionToggle from '../../../src/components/contract/EditPermissionToggle';
 import MemberSignList from '../../../src/components/contract/MemberSignList';
-
+import { Button } from '../../../src/components/ui/Button';
 import { ContractActions } from '../../../src/components/contract/ContractActions';
 
 export default function ContractScreen() {
@@ -133,7 +133,7 @@ export default function ContractScreen() {
         
         <View className="flex-row items-center gap-2">
           {/* 연결 상태 뱃지 */}
-          <View className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+          <View className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`} />
           
           <ContractActions
             fields={fields}
@@ -156,7 +156,7 @@ export default function ContractScreen() {
 
         {isHost && <EditPermissionToggle />}
 
-        {/* 💡 복구된 타이머 설정 영역 */}
+        {/* 타이머 설정 영역 */}
         <View className="mb-6 mt-2">
           <Text className="text-white/85 font-bold text-[15px] mb-3 ml-1">타이머 설정</Text>
           <View className="bg-[#111827] border border-white/10 rounded-2xl p-4 gap-4">
@@ -226,31 +226,56 @@ export default function ContractScreen() {
       </ScrollView>
 
       {/* 하단 액션 버튼 영역 */}
-      <View className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-3">
-        <Pressable
-          onPress={handleSignToggle}
-          className={`flex-1 py-4 rounded-2xl items-center border ${
-            isMeSigned ? 'bg-transparent border-[#10B981]' : 'bg-[#242136] border-[#914CFF]'
-          }`}
-        >
-          <Text className={`font-bold text-base ${isMeSigned ? 'text-[#10B981]' : 'text-white'}`}>
-            {isMeSigned ? '서명 취소' : '계약서 서명하기'}
-          </Text>
-        </Pressable>
+      <View className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-2">
+        <Button
+          title="나가기"
+          variant="outline"
+          onPress={handleLeaveRoom}
+          className="flex-1 bg-[#111827] border-white/10"
+        />
 
-        {isHost && (
-          <Pressable
-            disabled={isStarting}
-            onPress={() => handleStartTimer(!allSigned)}
-            className={`flex-1 py-4 rounded-2xl items-center flex-row justify-center ${
-              allSigned ? 'bg-[#7c3aed]' : 'bg-[#EF4444]'
-            }`}
+        {isHost && !allSigned && (
+          <Button
+            variant="destructive"
+            disabled={!isMeSigned}
+            onPress={() => handleStartTimer(true)}
+            className="flex-1"
           >
-            {allSigned ? <Play color="white" size={18} /> : <ShieldAlert color="white" size={18} />}
-            <Text className="font-bold text-base text-white ml-2">
-              {allSigned ? '집중 시작' : '강제 시작'}
+            <View className="flex-row items-center justify-center">
+              <ShieldAlert color={isMeSigned ? "white" : "#9CA3AF"} size={18} />
+              <Text className={`font-bold text-[16px] ml-2 ${isMeSigned ? 'text-white' : 'text-[#9CA3AF]'}`}>
+                강제 시작
+              </Text>
+            </View>
+          </Button>
+        )}
+
+        {isHost && allSigned && (
+          <Button
+            disabled={isStarting}
+            isLoading={isStarting}
+            onPress={() => handleStartTimer(false)}
+            className="flex-1"
+          >
+            <View className="flex-row items-center justify-center">
+              {!isStarting && <Play color="white" size={18} />}
+              <Text className={`font-bold text-[16px] ml-2 ${isStarting ? 'text-[#9CA3AF]' : 'text-white'}`}>
+                {isStarting ? '시작 중...' : '집중 시작'}
+              </Text>
+            </View>
+          </Button>
+        )}
+
+        {!isHost && (
+          <Button
+            onPress={handleSignToggle}
+            variant={isMeSigned ? "outline" : "primary"}
+            className={`flex-1 ${isMeSigned ? "border-[#10B981] bg-[#10B981]/10" : ""}`}
+          >
+            <Text className={`font-bold text-[16px] ${isMeSigned ? "text-[#10B981]" : "text-white"}`}>
+              {isMeSigned ? '서명 취소' : '계약서 서명하기'}
             </Text>
-          </Pressable>
+          </Button>
         )}
       </View>
     </SafeAreaView>
