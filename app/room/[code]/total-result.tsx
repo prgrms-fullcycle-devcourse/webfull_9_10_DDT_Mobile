@@ -1,5 +1,5 @@
 // app/room/[code]/total-result.tsx
-import React from 'react';
+import { Button } from '../../../src/components/ui/Button';
 import { View, Text, Pressable, ScrollView, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -67,13 +67,28 @@ export default function TotalResultScreen() {
         </View>
       </ScrollView>
 
-      <View className="p-4 border-t border-white/10 flex-row gap-3">
-        <Pressable onPress={handleShare} className="flex-1 bg-[#1A1F31] border border-white/10 py-4 rounded-xl flex-row justify-center items-center">
-          <ShareIcon color="white" size={16} /><Text className="text-white font-bold ml-2">공유하기</Text>
-        </Pressable>
-        <Pressable onPress={() => router.replace('/')} className="flex-1 bg-[#7c3aed] py-4 rounded-xl flex-row justify-center items-center">
-          <Home color="white" size={16} /><Text className="text-white font-bold ml-2">홈으로</Text>
-        </Pressable>
+      <View className="p-4 border-t border-white/10 flex-row gap-3 bg-[#050816]">
+        <Button 
+          variant="secondary" 
+          onPress={handleShare} 
+          className="flex-1"
+        >
+          <View className="flex-row items-center justify-center">
+            <ShareIcon color="white" size={16} />
+            <Text className="text-white font-bold ml-2 text-[16px]">공유하기</Text>
+          </View>
+        </Button>
+
+        <Button 
+          variant="primary" 
+          onPress={() => router.replace('/')} 
+          className="flex-1"
+        >
+          <View className="flex-row items-center justify-center">
+            <Home color="white" size={16} />
+            <Text className="text-white font-bold ml-2 text-[16px]">홈으로</Text>
+          </View>
+        </Button>
       </View>
     </SafeAreaView>
   );
