@@ -8,6 +8,9 @@ import { useAuthStore } from '../../../src/store/useAuthStore';
 import { useRoomStore } from '../../../src/store/useRoomStore';
 import { TimerProgressBar } from '../../../src/components/timer/TimerProgressBar';
 import { usePreventBack } from '../../../src/hooks/usePreventBack';
+import { Platform } from 'react-native';
+import { getDevicePushTokenAsync } from '../../../src/lib/notifications';
+import axiosClient from '../../../src/api/axiosClient';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +51,30 @@ export default function TimerScreen() {
   useEffect(() => {
     if (phase === 'result') router.replace(`/room/${code}/semi-result`);
   }, [phase, code, router]);
+
+  useEffect(() => {
+    async function subscribeToPush() {
+      try {
+        const deviceToken = await getDevicePushTokenAsync();
+        if (!deviceToken) return;
+
+        console.log('발급된 Device Token:', deviceToken);
+        console.log('현재 OS:', Platform.OS); // 'ios' | 'android'
+
+        // 백엔드로 토큰과 플랫폼 정보 전송
+        // (주의: 백엔드 API도 { token, platform }을 받도록 추후 수정해야 합니다)
+        await axiosClient.post(`/rooms/${code}/push-subscription`, {
+          token: deviceToken,
+          platform: Platform.OS, 
+        });
+
+      } catch (error) {
+        console.error('푸시 알림 설정 실패:', error);
+      }
+    }
+    
+    subscribeToPush();
+  }, [code]);
 
   const handleForfeit = () => {
     socket?.emit('member:giveup');
