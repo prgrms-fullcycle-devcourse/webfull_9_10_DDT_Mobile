@@ -130,14 +130,15 @@ export default function JoinRoom() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816]">
-      <View className="flex-row items-center px-4 py-3">
+      <View className="flex-row items-center px-4 py-3 border-b border-white/10">
         <Pressable onPress={() => router.back()} className="p-2">
           <ChevronLeft color="white" size={28} />
         </Pressable>
         <Text className="text-white text-lg font-bold ml-2">방 입장하기</Text>
       </View>
 
-      <View className="flex-1 px-6 pt-4 gap-6">
+      {/* 💡 contentContainerStyle로 ScrollView 내부 여유 공간 확보 */}
+      <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 20 }}>
         <Input
           label="내 닉네임"
           placeholder="방에서 사용할 닉네임을 입력해주세요"
@@ -147,7 +148,7 @@ export default function JoinRoom() {
           onChangeText={setNickname}
         />
 
-        <View className="gap-3">
+        <View className="gap-3 mt-6">
           <Text className="text-white/85 font-bold text-[15px]">프로필 선택</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible pb-2">
             <View className="flex-row gap-3 pr-4">
@@ -167,7 +168,7 @@ export default function JoinRoom() {
         </View>
 
         {!isHost && (
-          <View>
+          <View className="mt-6">
             <Input
               label="방 비밀번호"
               placeholder="비밀번호를 입력해주세요"
@@ -179,15 +180,15 @@ export default function JoinRoom() {
             <Text className="text-[#6B7280] text-xs ml-1 mt-1">· 비밀번호는 4~12자이어야 합니다.</Text>
           </View>
         )}
+      </ScrollView>
 
-        <View className="flex-1" />
-
+      {/* 💡 하단 버튼 고정 영역 */}
+      <View className="px-6 pb-4 pt-2 bg-[#050816]">
         <Button
           title="입장하기"
-          disabled={!isValid}
+          disabled={!isValid || joinMutation.isPending}
           isLoading={joinMutation.isPending}
           onPress={handleSubmit}
-          className="mb-4"
         />
       </View>
     </SafeAreaView>
