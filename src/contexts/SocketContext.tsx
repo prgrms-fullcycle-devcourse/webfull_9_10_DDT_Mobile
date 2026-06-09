@@ -21,6 +21,7 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
         auth: { token },
         query: { roomCode },
         transports: ['polling', 'websocket'],
+        forceBase64: true,
       });
 
       s.on('connect', () => console.log('소켓 연결 성공:', s.id));
