@@ -49,15 +49,13 @@ export default function MemberSignList() {
     socket?.emit('edit:member', { targetId, canEdit });
   };
 
+  const handleSignToggle = () => {
+    socket?.emit('member:sign', { signed: !isMeSigned });
+  };
+  
   return (
     <View className="mb-8">
-      <View className="flex-row items-center justify-between mb-3 ml-1 pr-1">
-        <Text className="text-white/85 font-bold text-[15px]">참여 멤버</Text>
-        <Text className="text-[#10B981] font-bold text-xs">{signedCount} / {memberList.length}명 서명 완료</Text>
-      </View>
-
       <View className="bg-[#111827] border border-white/10 rounded-2xl overflow-hidden">
-        {/* 내 정보 */}
         <View className="flex-row items-center justify-between p-4 border-b border-white/5">
           <View className="flex-row items-center">
             <View className={`w-10 h-10 rounded-full items-center justify-center border-2 ${isMeSigned ? 'border-[#10B981]' : 'border-white/20'} bg-[#1A1A2E] overflow-hidden`}>
@@ -74,16 +72,20 @@ export default function MemberSignList() {
               </View>
             </View>
           </View>
-          {isMeSigned ? (
-            <View className="bg-[#10B981]/20 px-3 py-1.5 rounded-full flex-row items-center">
-              <Check color="#10B981" size={14} strokeWidth={3} />
-              <Text className="text-[#10B981] text-xs font-bold ml-1">준비 완료</Text>
-            </View>
-          ) : (
-            <View className="bg-white/10 px-3 py-1.5 rounded-full">
-              <Text className="text-white/40 text-xs font-bold">서명 대기</Text>
-            </View>
-          )}
+          
+          {/* 💡 정적인 View에서 작동 가능한 Pressable로 변경 */}
+          <Pressable onPress={handleSignToggle} className="active:opacity-70">
+            {isMeSigned ? (
+              <View className="bg-[#10B981]/20 px-3 py-1.5 rounded-full flex-row items-center">
+                <Check color="#10B981" size={14} strokeWidth={3} />
+                <Text className="text-[#10B981] text-xs font-bold ml-1">준비 완료</Text>
+              </View>
+            ) : (
+              <View className="bg-[#7c3aed] px-3 py-1.5 rounded-full">
+                <Text className="text-white text-xs font-bold">터치하여 서명</Text>
+              </View>
+            )}
+          </Pressable>
         </View>
 
         {/* 다른 멤버들 */}

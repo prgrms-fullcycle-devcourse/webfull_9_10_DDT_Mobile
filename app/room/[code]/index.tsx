@@ -41,7 +41,7 @@ export default function JoinRoom() {
 
   useEffect(() => {
     fetchMe();
-    SecureStore.getItemAsync(`isHost:${code}`).then((val) => {
+    SecureStore.getItemAsync(`isHost_${code}`).then((val) => {
       setIsHost(val === 'true');
     });
   }, [code]);
@@ -72,7 +72,7 @@ export default function JoinRoom() {
       return res.data as { id: string; isReturning: boolean };
     },
     onSuccess: () => {
-      router.push(`/room/${code}/contract`);
+      router.replace(`/room/${code}/contract`);
     },
     onError: (err: any) => {
       const serverMessage = err.response?.data?.message;
@@ -85,7 +85,7 @@ export default function JoinRoom() {
 
     let submitPassword = password;
     if (isHost) {
-      const savedPw = await SecureStore.getItemAsync(`hostPassword:${code}`);
+      const savedPw = await SecureStore.getItemAsync(`hostPassword_${code}`);
       submitPassword = savedPw ?? '';
     }
 
