@@ -109,9 +109,9 @@ export default function CreateRoom() {
     },
     onSuccess: async (data) => {
       setRoomCode(data.code);
-      setInviteLink(data.url); // 💡 하드코딩 대신 API가 준 URL 사용
-      await SecureStore.setItemAsync(`isHost:${data.code}`, 'true');
-      await SecureStore.setItemAsync(`hostPassword:${data.code}`, password);
+      setInviteLink(data.url);
+      await SecureStore.setItemAsync(`isHost_${data.code}`, 'true');
+      await SecureStore.setItemAsync(`hostPassword_${data.code}`, password);
       setStep('complete');
     },
     onError: (err: any) => {

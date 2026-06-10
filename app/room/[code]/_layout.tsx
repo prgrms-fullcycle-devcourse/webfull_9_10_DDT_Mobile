@@ -1,13 +1,13 @@
 // app/room/[code]/_layout.tsx
 import React, { useEffect, useState } from 'react';
-import { Slot, useLocalSearchParams, useRouter } from 'expo-router';
+import { Slot, useGlobalSearchParams, useRouter } from 'expo-router';
 import { View, Text, Pressable } from 'react-native';
 import { RoomProvider, useRoom } from '../../../src/contexts/RoomContext';
 import { SocketProvider } from '../../../src/contexts/SocketContext';
 import { getToken } from '../../../src/lib/token';
 
 export default function JoinedLayout() {
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const { code } = useGlobalSearchParams<{ code: string }>();
 
   // 앱 환경에서는 SecureStore 정리를 화면 이탈(언마운트) 보다는 
   // 방 완전 종료/퇴장 시점에 하는 것이 안전하므로 여기서는 생략합니다.
