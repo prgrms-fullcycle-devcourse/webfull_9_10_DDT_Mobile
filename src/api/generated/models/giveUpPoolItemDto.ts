@@ -6,10 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface TierDto {
-  tier: number;
-  minPct: number;
-  /** @nullable */
-  maxPct?: number | null;
-  count: number;
+export interface GiveUpPoolItemDto {
+  itemId: string;
+  content: string;
 }

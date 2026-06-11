@@ -6,10 +6,12 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface TierDto {
-  tier: number;
-  minPct: number;
-  /** @nullable */
-  maxPct?: number | null;
+export interface GiveUpPenaltyDto {
+  /**
+     * 휠 정지 위치 매핑용 PENALTY_ITEM.id (풀에 없으면 null)
+     * @nullable
+     */
+  itemId: string | null;
+  content: string;
   count: number;
 }

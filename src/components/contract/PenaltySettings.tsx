@@ -57,7 +57,7 @@ export default function PenaltySettings({ penalties, addPenalty, updatePenalty, 
   if (!me) return null;
   
   const myMember = members[me.id];
-  const canEdit = myMember?.canEdit ?? false;
+  const canEdit = myMember?.isHost || (myMember?.canEdit ?? false);
   const myNickname = myMember?.nickname ?? me.nickname;
 
   return (

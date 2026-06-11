@@ -5,14 +5,14 @@
  * DDT 프로젝트의 백엔드 API 문서입니다.
  * OpenAPI spec version: 1.0
  */
-import type { ResultResponseDto } from './resultResponseDto';
+import type { GiveUpRouletteResponseDto } from './giveUpRouletteResponseDto';
 
-export type ResultControllerGetResult200 = ({
+export type RouletteControllerGetGiveUpResult200 = ({
   statusCode?: number;
   timestamp?: string;
   path?: string;
   message?: string;
-  data?: ResultResponseDto;
+  data?: GiveUpRouletteResponseDto;
   /** @nullable */
   error?: string | null;
 });

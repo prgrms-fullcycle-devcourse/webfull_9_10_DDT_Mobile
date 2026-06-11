@@ -34,6 +34,41 @@ export default function TimerScreen() {
   const isFocusRef = useRef(true);
   const lastEscapeStartRef = useRef<number>(0);
 
+  useEffect(() => {
+    const registerPushToken = async () => {
+      if (Platform.OS === 'android') {
+        const token = await getDevicePushTokenAsync();
+        
+        if (token) {
+          try {
+            console.log('발급된 Android FCM Token:', token);
+            // 💡 Orval 생성 API 대신 직접 axiosClient 사용 (Body 누락 방지)
+            await axiosClient.post(`/rooms/${code}/push-subscription`, {
+              platform: 'android',
+              token: token,
+            });
+            console.log('푸시 토큰 백엔드 등록 완료');
+          } catch (e) {
+            console.error('푸시 토큰 등록 실패:', e);
+          }
+        }
+      } else if (Platform.OS === 'ios') {
+        try {
+          // 💡 iOS는 서버 푸시 대신 로컬 알림을 사용할 것임을 백엔드에 알림
+          await axiosClient.post(`/rooms/${code}/push-subscription`, {
+            platform: 'ios',
+            token: 'local_only',
+          });
+          console.log('iOS 로컬 알림 모드 백엔드 등록 완료');
+        } catch (e) {
+          console.error('iOS 로컬 모드 등록 실패:', e);
+        }
+      }
+    };
+
+    registerPushToken();
+  }, [code]);
+
   // 1️⃣ 로컬 시간 계산 (1초마다 렌더링)
   useEffect(() => {
     if (!sessionInfo) return;
