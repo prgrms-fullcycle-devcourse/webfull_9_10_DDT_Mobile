@@ -1,3 +1,4 @@
+// src/components/timer/TimerProgressBar.tsx
 import React from 'react';
 import { View, Text } from 'react-native';
 
@@ -24,13 +25,13 @@ export const TimerProgressBar = ({
 }: TimerProgressBarProps) => {
   const isFocus = mode === 'FOCUS';
   const displayTime = Math.max(0, timeLeft);
+  const currentRatio = totalDuration > 0 ? ((totalDuration - displayTime) / totalDuration) * 100 : 0;
 
   return (
     <View className="w-full max-w-sm mb-8 px-4">
-      <View className="flex-row items-center h-2 w-full">
+      <View className="flex-row items-center h-1.5 w-full">
         {Array.from({ length: totalSessions }).map((_, index) => {
           const sessionNum = index + 1;
-          const currentRatio = totalDuration > 0 ? ((totalDuration - displayTime) / totalDuration) * 100 : 0;
 
           let focusWidth = "0%";
           if (sessionNum < currentSession) focusWidth = "100%";
@@ -43,7 +44,7 @@ export const TimerProgressBar = ({
           return (
             <View key={sessionNum} className="flex-1 flex-row items-center h-full mx-0.5">
               <View className="h-full bg-[#1F1E29] rounded-full overflow-hidden" style={{ flexGrow: focusDuration }}>
-                <View className="h-full bg-[#A855F7] rounded-full" style={{ width: focusWidth as any }} />
+                <View className="h-full bg-[#7c3aed] rounded-full" style={{ width: focusWidth as any }} />
               </View>
               {sessionNum < totalSessions && (
                 <View className="h-full bg-[#1F1E29] rounded-full overflow-hidden ml-1" style={{ flexGrow: breakDuration }}>
@@ -54,9 +55,10 @@ export const TimerProgressBar = ({
           );
         })}
       </View>
+      
       <View className="flex-row justify-between mt-3">
         <View className="flex-row items-center">
-          <View className="w-2 h-2 rounded-full bg-[#A855F7] mr-1.5" />
+          <View className="w-2 h-2 rounded-full bg-[#7c3aed] mr-1.5" />
           <Text className="text-[#64748B] text-xs font-bold mr-3">집중</Text>
           <View className="w-2 h-2 rounded-full bg-[#22C55E] mr-1.5" />
           <Text className="text-[#64748B] text-xs font-bold">휴식</Text>

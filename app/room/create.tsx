@@ -1,5 +1,5 @@
 // app/room/create.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // 💡 useEffect, useRef 추가
 import { View, Text, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,6 +14,7 @@ import axiosClient from '../../src/api/axiosClient';
 
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
+import { useActiveRoom, getActiveRoomPath } from '../../src/hooks/useActiveRoom'; // 💡 훅 임포트
 
 type Step = 'form' | 'complete';
 
@@ -91,16 +92,39 @@ function CreateRoomComplete({
 
 export default function CreateRoom() {
   const router = useRouter();
+  
+  // 💡 isLoggedIn과 me를 모두 스토어에서 가져오도록 수정
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const me = useAuthStore((state) => state.me);
-  const isGuest = me?.role === 'guest';
+  
+  // 비회원이거나 게스트일 경우를 모두 포함하여 검사
+  const cannotCreate = !isLoggedIn || me?.role === 'guest';
 
-  const [step, setStep] = useState<Step>('form');
+  const [step, setStep] = useState<'form' | 'complete'>('form');
   const [roomName, setRoomName] = useState('');
   const [password, setPassword] = useState('');
   const [roomCode, setRoomCode] = useState('');
-  const [inviteLink, setInviteLink] = useState(''); // 💡 백엔드에서 받은 링크 저장용 상태
+  const [inviteLink, setInviteLink] = useState('');
 
   const isValid = roomName.trim().length > 0 && password.length >= 4 && password.length <= 12;
+  
+  // 💡 이미 활성화된 방이 있는지 확인 및 Alert 처리
+  const activeRoom = useActiveRoom();
+  const activeRoomPromptedRef = useRef(false);
+
+  useEffect(() => {
+    if (!activeRoom || activeRoomPromptedRef.current) return;
+    
+    activeRoomPromptedRef.current = true;
+    Alert.alert(
+      '이미 진행 중인 방이 있습니다',
+      `[${activeRoom.title}] 방으로 복귀하시겠습니까?`,
+      [
+        { text: '홈으로', style: 'cancel', onPress: () => router.replace('/') },
+        { text: '방 복귀하기', onPress: () => router.replace(getActiveRoomPath(activeRoom) as any) }
+      ]
+    );
+  }, [activeRoom, router]);
 
   const createRoomMutation = useMutation({
     mutationFn: async (input: { title: string; password: string }) => {
@@ -132,7 +156,7 @@ export default function CreateRoom() {
     Alert.alert('복사 완료', '초대 정보가 클립보드에 복사되었어요!');
   };
 
-  if (isGuest) {
+  if (cannotCreate) {
     return (
       <SafeAreaView className="flex-1 bg-[#050816]">
         <View className="flex-row items-center px-4 py-3">
