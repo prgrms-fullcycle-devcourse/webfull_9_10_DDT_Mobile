@@ -69,7 +69,7 @@ export default function TierSettings({ tiers, addTier, updateTier, setTierBounda
   if (!me) return null;
   
   const myMember = members[me.id];
-  const canEdit = myMember?.canEdit ?? false;
+  const canEdit = myMember?.isHost || (myMember?.canEdit ?? false);
   const myNickname = myMember?.nickname ?? me.nickname;
 
   const isFallback = tiers.length === 0;

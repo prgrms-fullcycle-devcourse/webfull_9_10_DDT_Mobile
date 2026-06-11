@@ -23,6 +23,7 @@ export default function MemberSignList() {
   const socket = useSocket();
   const me = useAuthStore((state) => state.me);
   const members = useRoomStore((state) => state.members);
+  const upsertMember = useRoomStore((state) => state.upsertMember);
   const hostId = useRoomStore((state) => state.hostId);
 
   if (!me) return null;
@@ -46,10 +47,12 @@ export default function MemberSignList() {
   };
 
   const handleMemberEditToggle = (targetId: string, canEdit: boolean) => {
+    upsertMember(targetId, { canEdit });
     socket?.emit('edit:member', { targetId, canEdit });
   };
 
   const handleSignToggle = () => {
+    upsertMember(me.id, { isSigned: !isMeSigned });
     socket?.emit('member:sign', { signed: !isMeSigned });
   };
   
