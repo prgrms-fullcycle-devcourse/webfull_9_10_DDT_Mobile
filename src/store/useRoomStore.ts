@@ -1,6 +1,6 @@
-// src/store/useRoomStore.ts
 import { create } from 'zustand';
 
+// ... (기존 인터페이스들은 그대로 유지) ...
 export interface RoomMember {
   userId: string;
   nickname: string;
@@ -46,6 +46,10 @@ interface RoomStore {
   
   setSessionInfo: (info: SessionInfo | null) => void;
   setEscapeSummary: (summary: EscapeSummaryItem[]) => void;
+  
+  // 💡 반복문 덮어쓰기 버그 방지용 일괄 업데이트 함수 추가
+  updateAllNonHostsCanEdit: (canEdit: boolean) => void;
+  resetAllSignatures: () => void;
 }
 
 export const useRoomStore = create<RoomStore>((set) => ({
@@ -75,4 +79,26 @@ export const useRoomStore = create<RoomStore>((set) => ({
   reset: () => set({ hostId: null, members: {}, phase: null, sessionInfo: null, escapeSummary: [] }),
   setSessionInfo: (info) => set({ sessionInfo: info }),
   setEscapeSummary: (summary) => set({ escapeSummary: summary }),
+
+  // 💡 방장 외 인원 편집 권한 일괄 변경
+  updateAllNonHostsCanEdit: (canEdit) =>
+    set((s) => {
+      const next = { ...s.members };
+      Object.keys(next).forEach((uid) => {
+        if (!next[uid].isHost) {
+          next[uid] = { ...next[uid], canEdit };
+        }
+      });
+      return { members: next };
+    }),
+
+  // 💡 계약서 서명 일괄 초기화
+  resetAllSignatures: () =>
+    set((s) => {
+      const next = { ...s.members };
+      Object.keys(next).forEach((uid) => {
+        next[uid] = { ...next[uid], isSigned: false };
+      });
+      return { members: next };
+    }),
 }));

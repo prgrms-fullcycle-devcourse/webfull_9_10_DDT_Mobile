@@ -1,13 +1,12 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants'; // 💡 추가
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
+    shouldShowBanner: true, // 💡 변경됨
+    shouldShowList: true,   // 💡 변경됨
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -16,7 +15,6 @@ Notifications.setNotificationHandler({
 export async function getDevicePushTokenAsync() {
   let token;
 
-  // 💡 Expo Go 환경인지 체크하여, Expo Go일 경우 토큰 발급을 시도하지 않고 건너뜁니다.
   if (Constants.appOwnership === 'expo') {
     console.log('Expo Go 환경에서는 푸시 알림 토큰 발급을 지원하지 않습니다.');
     return null;
@@ -51,8 +49,6 @@ export async function getDevicePushTokenAsync() {
     } catch (e) {
       console.error('Device Push Token 발급 실패:', e);
     }
-  } else {
-    console.log('푸시 알림 토큰은 실제 기기에서만 발급 가능합니다 (시뮬레이터 불가).');
   }
 
   return token;
