@@ -4,8 +4,15 @@
     "slug": "ddt-mobile",
     "version": "1.0.0",
     "scheme": "ddt",
+    "icon": "./assets/images/icons/icon-192x192.png",
+    "splash": {
+      "image": "./assets/images/icons/icon-192x192.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050816"
+    },
     "ios": {
-      "bundleIdentifier": "com.devcourse.ddt" 
+      "bundleIdentifier": "com.devcourse.ddt",
+      "supportsTablet": false
     },
     "android": {
       "package": "com.devcourse.ddt",

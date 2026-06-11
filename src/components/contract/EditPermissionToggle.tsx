@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Switch } from 'react-native';
 import { Unlock, Lock } from 'lucide-react-native';
 import { useSocket } from '../../contexts/SocketContext';
@@ -9,17 +9,24 @@ export default function EditPermissionToggle() {
   const socket = useSocket();
   const me = useAuthStore((state) => state.me);
   const members = useRoomStore((state) => state.members);
-  const updateAllNonHostsCanEdit = useRoomStore((state) => state.updateAllNonHostsCanEdit); // 💡 교체
+  const updateAllNonHostsCanEdit = useRoomStore((state) => state.updateAllNonHostsCanEdit);
   const hostId = useRoomStore((state) => state.hostId);
 
   const isHost = me?.id === hostId;
   const hostOnly = Object.values(members).some((m) => !m.isHost && m.canEdit === false);
   const allCanEdit = !hostOnly;
 
+  // 💡 UI에서 스위치가 튕기지 않도록 로컬 상태 추가
+  const [localToggle, setLocalToggle] = useState(allCanEdit);
+
+  useEffect(() => {
+    setLocalToggle(allCanEdit);
+  }, [allCanEdit]);
+
   const handleToggle = (value: boolean) => {
     if (!socket || !isHost) return;
     
-    // 💡 단일 함수 호출로 모든 비방장 유저의 권한 상태를 한 번에 덮어씀 (버그 픽스)
+    setLocalToggle(value); // 즉각적인 UI 반영
     updateAllNonHostsCanEdit(value);
     socket.emit('edit:all', { canEdit: value });
   };
@@ -29,10 +36,10 @@ export default function EditPermissionToggle() {
       <View className="flex-row justify-between items-center mb-1">
         <View className="flex-row items-center gap-2">
           <Text className="text-white text-base font-bold">계약서 편집 권한</Text>
-          {allCanEdit ? <Unlock color="#A855F7" size={16} /> : <Lock color="#A855F7" size={16} />}
+          {localToggle ? <Unlock color="#A855F7" size={16} /> : <Lock color="#A855F7" size={16} />}
         </View>
         <Switch
-          value={allCanEdit}
+          value={localToggle}
           onValueChange={handleToggle}
           disabled={!isHost}
           trackColor={{ false: '#374151', true: '#7c3aed' }}
@@ -40,7 +47,7 @@ export default function EditPermissionToggle() {
         />
       </View>
       <Text className="text-white/50 text-xs mt-1">
-        {hostOnly ? '방장만 편집 가능' : '모든 멤버가 편집 가능'} (OFF 시 방장 전용)
+        {!localToggle ? '방장만 편집 가능' : '모든 멤버가 편집 가능'} (OFF 시 방장 전용)
       </Text>
     </View>
   );

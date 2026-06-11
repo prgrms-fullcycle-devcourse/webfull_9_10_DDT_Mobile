@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device'; // 💡 디바이스 감지용
+import * as Device from 'expo-device'; 
 
 import { useSocket } from '../../../src/contexts/SocketContext';
 import { useAuthStore } from '../../../src/store/useAuthStore';
@@ -18,7 +18,6 @@ import { getRoomApi } from '../../../src/api/generated/room-api/room-api';
 import axiosClient from '../../../src/api/axiosClient';
 import { Button } from '../../../src/components/ui/Button';
 
-// 이탈 시간 포맷팅 헬퍼
 const formatEscapeTime = (ms: number) => {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -35,7 +34,7 @@ export default function TimerScreen() {
   const me = useAuthStore((s) => s.me);
   const sessionInfo = useRoomStore((s) => s.sessionInfo);
   const members = useRoomStore((s) => s.members);
-  const escapeSummary = useRoomStore((s) => s.escapeSummary); // 💡 누적 이탈 시간 배열
+  const escapeSummary = useRoomStore((s) => s.escapeSummary); 
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -43,11 +42,9 @@ export default function TimerScreen() {
   const isFocusRef = useRef(true);
   const lastEscapeStartRef = useRef<number>(0);
 
-  // 1️⃣ 알림 권한 및 토큰 등록 (안드로이드 에뮬레이터도 로컬 알림 우회)
   useEffect(() => {
     const registerPushToken = async () => {
       if (Platform.OS === 'android' && Device.isDevice) {
-        // 실제 안드로이드 기기는 AWS SNS (FCM)
         const token = await getDevicePushTokenAsync();
         if (token) {
           try {
@@ -55,7 +52,6 @@ export default function TimerScreen() {
           } catch (e) {}
         }
       } else {
-        // 💡 iOS 또는 안드로이드 에뮬레이터: 권한 먼저 요청 후 로컬 알림 모드로 등록
         const { status } = await Notifications.requestPermissionsAsync();
         if (status === 'granted') {
           try {
@@ -67,14 +63,12 @@ export default function TimerScreen() {
     registerPushToken();
   }, [code]);
   
-  // 로컬 시간 계산
   useEffect(() => {
     if (!sessionInfo) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [sessionInfo]);
 
-  // 중도 포기 확인 및 결과화면 이동 처리
   useEffect(() => {
     const myMember = me ? members[me.id] : undefined;
     if (myMember?.gaveUpAt) {
@@ -87,7 +81,6 @@ export default function TimerScreen() {
     else if (phase === 'result') router.replace(`/room/${code}/semi-result`);
   }, [phase, code, router]);
 
-  // 소켓 하트비트
   useEffect(() => {
     if (!socket || !sessionInfo) return;
     const interval = setInterval(() => socket.emit('heartbeat'), 5000);
@@ -101,7 +94,6 @@ export default function TimerScreen() {
     socket?.emit('escape:start');
   }, [socket]);
 
-  // 2️⃣ 앱 이탈(백그라운드) 시 알림 로직
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (appState.current.match(/active/) && nextAppState.match(/inactive|background/)) {
@@ -111,7 +103,7 @@ export default function TimerScreen() {
           if (Platform.OS === 'ios' || !Device.isDevice) {
             await Notifications.scheduleNotificationAsync({
               content: { title: "🚨 이탈 감지!", body: "화면을 벗어났습니다! 벌칙 시간이 누적되고 있으니 어서 돌아오세요.", sound: true },
-              trigger: null,
+              trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1 },
             });
           }
         } else {
@@ -142,21 +134,18 @@ export default function TimerScreen() {
     onError: (error: any) => Alert.alert('오류', error.response?.data?.message || '처리에 실패했습니다.'),
   });
 
-  if (!me || !sessionInfo) {
-    return (
-      <SafeAreaView className="flex-1 bg-[#050816] items-center justify-center">
-        <Text className="text-white">로딩 중...</Text>
-      </SafeAreaView>
-    );
-  }
+  // 💡 1. Early Return에 막히지 않도록 옵셔널 체이닝(?.)을 이용해 연산 에러 방지
+  const focusMin = sessionInfo?.focusMin ?? 0;
+  const breakMin = sessionInfo?.breakMin ?? 0;
+  const serverOffset = sessionInfo?.serverOffset ?? 0;
+  const startedAt = sessionInfo?.startedAt ?? 0;
+  const totalRounds = sessionInfo?.totalRounds ?? 1;
 
-  // ⏱ 시간 계산 로직
-  const adjustedNow = now + (sessionInfo.serverOffset ?? 0);
-  const elapsed = adjustedNow - sessionInfo.startedAt;
-  const focusMs = sessionInfo.focusMin * 60 * 1000;
-  const breakMs = sessionInfo.breakMin * 60 * 1000;
+  const adjustedNow = now + serverOffset;
+  const elapsed = adjustedNow - startedAt;
+  const focusMs = focusMin * 60 * 1000;
+  const breakMs = breakMin * 60 * 1000;
   const cycleMs = focusMs + breakMs;
-  const totalRounds = sessionInfo.totalRounds;
   const totalMs = focusMs * totalRounds + breakMs * Math.max(0, totalRounds - 1);
 
   const clampedElapsed = Math.min(Math.max(0, elapsed), totalMs);
@@ -174,30 +163,40 @@ export default function TimerScreen() {
   const phaseRemainingSec = Math.max(0, Math.ceil(phaseRemainingMs / 1000));
   const phaseTotalSec = Math.ceil(phaseTotalMs / 1000);
   
-  if (phaseRemainingSec === 0) {
+  if (sessionInfo && phaseRemainingSec === 0) {
     getRoomApi(axiosClient).roomControllerFindById(code!).then(res => {
       const data = res.data as any;
       if (data.phase === 'result' || data.phase === 'closed') useRoomStore.setState({ phase: data.phase });
     }).catch(()=>{});
   }
 
-  // 3️⃣ 휴식 종료 1분 전 예약 알림 (라운드당 1회 실행)
+  // 💡 2. Hook 위치 보정 (모든 Hook은 Early Return 보다 위에 있어야 함)
   useEffect(() => {
     let notifId: string | null = null;
-    // 휴식 모드이고 전체 휴식 시간이 1분 이상일 때 예약
-    if (!isFocus && (sessionInfo.breakMin * 60) >= 60) {
+    if (sessionInfo && !isFocus && (breakMin * 60) >= 60) {
       if (Platform.OS === 'ios' || !Device.isDevice) {
         Notifications.scheduleNotificationAsync({
           content: { title: "휴식이 1분 남았어요! ⏰", body: "곧 집중 시간이 시작됩니다. 자리에 앉아주세요!", sound: true },
-          // 전체 휴식 시간에서 60초를 뺀 시점에 알림
-          trigger: { seconds: (sessionInfo.breakMin * 60) - 60 }
+          trigger: { 
+            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, 
+            seconds: Math.max(1, (breakMin * 60) - 60) 
+          }
         }).then(id => notifId = id);
       }
     }
     return () => {
       if (notifId) Notifications.cancelScheduledNotificationAsync(notifId).catch(()=>{});
     };
-  }, [isFocus, round, sessionInfo.breakMin]);
+  }, [isFocus, round, breakMin, sessionInfo]);
+
+  // 💡 3. 모든 Hook 선언이 끝난 후 제일 마지막에 Early Return 배치
+  if (!me || !sessionInfo) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#050816] items-center justify-center">
+        <Text className="text-white">로딩 중...</Text>
+      </SafeAreaView>
+    );
+  }
 
   const focusDurationSec = sessionInfo.focusMin * 60;
   const breakDurationSec = sessionInfo.breakMin * 60;
@@ -209,8 +208,7 @@ export default function TimerScreen() {
     subStatusText: isFocus ? '집중 중' : '휴식 중',
   };
 
-  // 내 이탈 시간 추출
-  const myIdentifier = me.role === 'user' ? me.id : me.id; // 게스트는 id 필드에 토큰이 들어있음
+  const myIdentifier = me.role === 'user' ? me.id : me.id; 
   const myEscapeMs = escapeSummary.find(e => e.identifier === myIdentifier)?.totalEscapeMs || 0;
 
   return (
@@ -241,7 +239,6 @@ export default function TimerScreen() {
           subStatusText={theme.subStatusText}
         />
 
-        {/* 💡 휴식 시간에 이탈 시간 & 경고 문구 표시 */}
         {!isFocus && (
           <View className="mt-8 items-center">
             <View className="bg-white/10 px-4 py-3 rounded-xl border border-white/20 mb-4">
