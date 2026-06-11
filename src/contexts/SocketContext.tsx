@@ -115,6 +115,45 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
         });
       });
 
+      // 💡 여기서부터 새롭게 추가된 부분입니다!
+      // === 타이머 세션 시작 ===
+      s.on('session:started', (data: {
+        startedAt: string;
+        focusMin: number;
+        breakMin: number;
+        totalRounds: number;
+        serverTime: string;
+      }) => {
+        const clientNow = Date.now();
+        const serverNow = new Date(data.serverTime).getTime();
+
+        useRoomStore.getState().setPhase('timer');
+        useRoomStore.getState().setSessionInfo({
+          startedAt: new Date(data.startedAt).getTime(),
+          focusMin: data.focusMin,
+          breakMin: data.breakMin,
+          totalRounds: data.totalRounds,
+          serverOffset: serverNow - clientNow,
+        });
+      });
+
+      // === 타이머 세션 종료 ===
+      s.on('session:ended', () => {
+        useRoomStore.getState().setPhase('result');
+        useRoomStore.getState().setSessionInfo(null);
+      });
+
+      // === 중도 포기 ===
+      s.on('member:gave-up', ({ userId, gaveUpAt }: { userId: string, gaveUpAt: string }) => {
+        upsertMember(userId, { gaveUpAt });
+      });
+
+      // === 이탈 요약 정보 수신 ===
+      s.on('escape:summary', ({ members }: { members: { identifier: string; totalEscapeMs: number }[] }) => {
+        useRoomStore.getState().setEscapeSummary(members);
+      });
+      // 💡 추가 끝!
+
       // === 방 종료 ===
       s.on('room:closed', (payload: { reason: string }) => {
         console.warn('방 종료:', payload.reason);

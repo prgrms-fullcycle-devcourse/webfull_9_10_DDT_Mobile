@@ -83,7 +83,6 @@ export default function PenaltySettings({ penalties, addPenalty, updatePenalty, 
                   ownerColor={fieldOwners[penaltyKey]?.color}
                   onFocus={() => handleFocus(penaltyKey, me.id, myNickname)}
                   onBlur={handleBlur}
-                  onOriginalUpdate={updatePenalty}
                   onUpdate={(val: string) => updatePenalty(i, val)}
                 />
                 {canEdit && (

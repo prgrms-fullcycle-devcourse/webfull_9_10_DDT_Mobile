@@ -1,3 +1,4 @@
+// src/components/contract/TimerSettings.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { ContractFields, FocusedField } from '../../hooks/useYjsContract';
@@ -50,21 +51,30 @@ function TimerNumberInput({ value, min, max, disabled, isOwned, ownerColor, onFo
       editable={!disabled}
       onFocus={() => {
         isEditingRef.current = true;
+        setDraft(''); // 💡 터치 시 값을 비워서 즉시 입력 가능하게 함
         onFocus();
       }}
       onChangeText={(val) => {
-        setDraft(val);
-        if (val !== '') {
-          const n = parseInt(val);
+        // 모바일 환경에서 숫자 외의 값(공백, 문자 등) 필터링
+        const numericVal = val.replace(/[^0-9]/g, '');
+        setDraft(numericVal);
+        
+        if (numericVal !== '') {
+          const n = parseInt(numericVal, 10);
           if (!isNaN(n) && n >= min && (max === undefined || n <= max)) {
-            onCommit(n);
+            onCommit(n); // 범위 내의 숫자일 때만 실시간 동기화
           }
         }
       }}
       onBlur={() => {
         isEditingRef.current = false;
-        let n = parseInt(draft);
-        if (isNaN(n)) n = min;
+        let n = parseInt(draft, 10);
+        
+        // 💡 빈칸인 채로 키보드를 닫으면 최소값(1)이 아니라 '원래 있던 값'으로 원상복구
+        if (isNaN(n)) {
+          n = value;
+        }
+        
         n = Math.max(min, Math.min(n, max ?? n));
         setDraft(String(n));
         onCommit(n);
@@ -99,6 +109,7 @@ export default function TimerSettings({ fields, fieldOwners, updateField, handle
         <Text className="text-white/40 text-xs">최대 10시간</Text>
       </View>
       <View className="bg-[#111827] border border-white/10 rounded-2xl p-4 gap-4">
+        
         <View className="flex-row items-center justify-between">
           <View className="flex-1">
             <Text className="text-white/80 font-medium">집중 시간 <Text className="text-white/40 text-xs">(최대 120분)</Text></Text>

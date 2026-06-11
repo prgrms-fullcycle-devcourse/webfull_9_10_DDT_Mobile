@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
 import { ChevronLeft, ShieldAlert, Play } from 'lucide-react-native';
 
@@ -28,6 +28,7 @@ import { ContractActions } from '../../../src/components/contract/ContractAction
 export default function ContractScreen() {
   const router = useRouter();
   const { code } = useGlobalSearchParams<{ code: string }>();
+  const insets = useSafeAreaInsets();
   const room = useRoom();
   const socket = useSocket();
   const me = useAuthStore((s) => s.me);
@@ -38,14 +39,18 @@ export default function ContractScreen() {
 
   const [isStarting, setIsStarting] = useState(false);
 
-  const isHost = me?.id === hostId;
+  // 💡 방장 권한 및 내 정보 확인을 견고하게 수정
   const myMember = me ? members[me.id] : undefined;
+  const isHost = (me?.id === hostId) || (myMember?.isHost === true);
   const isMeSigned = myMember?.isSigned ?? false;
+  const isReady = !!me && !!myMember; // 소켓에서 멤버 리스트를 다 받을 때까지 대기
 
   const memberList = Object.values(members);
   const signedCount = memberList.filter((m) => m.isSigned).length;
-  const allSigned = memberList.length > 0 && signedCount === memberList.length;
+  const memberCount = memberList.length;
+  const allSigned = memberCount > 0 && signedCount === memberCount;
 
+  // 💡 isReady가 true일 때만 Yjs 연결을 활성화하여 Race Condition 방지
   const { 
     fields, updateField, 
     tiers, addTier, updateTier, setTierBoundary, removeTier,
@@ -53,7 +58,7 @@ export default function ContractScreen() {
     isConnected, fieldOwners, handleFocus, handleBlur, applyAll
   } = useYjsContract(
     room.code,
-    !!me,
+    isReady, 
     isHost
   );
 
@@ -79,7 +84,7 @@ export default function ContractScreen() {
   const handleLeaveRoom = () => {
     Alert.alert(
       isHost ? '방 폭파' : '방 나가기',
-      isHost ? '방장이 나가면 방이 사라집니다. 정말 나가시겠어요?' : '정말 방에서 나가시겠어요?',
+      isHost ? '방장이 나가면 방이 사라집니다.\n정말 나가시겠어요?' : '정말 방에서 나가시겠어요?',
       [
         { text: '취소', style: 'cancel' },
         {
@@ -104,6 +109,22 @@ export default function ContractScreen() {
 
   const handleStartTimer = async (force: boolean) => {
     if (!isHost) return;
+    
+    if (force) {
+      Alert.alert(
+        '강제로 시작하시겠습니까?',
+        '서명하지 않은 유저는 자동으로 강퇴됩니다.',
+        [
+          { text: '아니요', style: 'cancel' },
+          { text: '시작하기', style: 'destructive', onPress: () => executeStart(true) }
+        ]
+      );
+    } else {
+      executeStart(false);
+    }
+  };
+
+  const executeStart = async (force: boolean) => {
     setIsStarting(true);
     try {
       const dto = toBackendFormat(fields, tiers, penalties);
@@ -121,7 +142,13 @@ export default function ContractScreen() {
     }
   };
 
-  if (!me) return null;
+  if (!isReady) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#050816] items-center justify-center">
+        <ActivityIndicator size="large" color="#7c3aed" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816]">
@@ -144,9 +171,7 @@ export default function ContractScreen() {
         {isHost && <EditPermissionToggle />}
 
         <TimerSettings fields={fields} fieldOwners={fieldOwners} updateField={updateField} handleFocus={handleFocus} handleBlur={handleBlur} />
-
         <PenaltySettings penalties={penalties} addPenalty={addPenalty} updatePenalty={updatePenalty} removePenalty={removePenalty} fieldOwners={fieldOwners} handleFocus={handleFocus} handleBlur={handleBlur} />
-
         <TierSettings tiers={tiers} addTier={addTier} updateTier={updateTier} setTierBoundary={setTierBoundary} removeTier={removeTier} fieldOwners={fieldOwners} handleFocus={handleFocus} handleBlur={handleBlur} />
 
         <View className="mx-4 mt-6 mb-10">
@@ -158,49 +183,42 @@ export default function ContractScreen() {
         </View>
       </ScrollView>
 
-      {/* 하단 액션 버튼 영역 */}
-      <View className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-2">
-        <Button title="나가기" variant="outline" onPress={handleLeaveRoom} className="flex-1 bg-[#111827] border-white/10" />
-        {!isMeSigned ? (
-            <Button
-              title="계약서 서명하기"
-              variant="primary"
-              onPress={handleSignToggle}
-              className="flex-1"
-            />
-          ) : (
-            <>
-              {isHost && !allSigned && (
-                <Button variant="destructive" onPress={() => handleStartTimer(true)} className="flex-1">
-                  <View className="flex-row items-center justify-center">
-                    <ShieldAlert color="white" size={18} />
-                    <Text className="font-bold text-[16px] text-white ml-2">강제 시작</Text>
-                  </View>
-                </Button>
-              )}
+      {/* 웹 프론트엔드와 동일한 모바일 하단 버튼 레이아웃 적용 */}
+      <View 
+        className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-2"
+        style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+      >
+        <Button title="나가기" variant="secondary" onPress={handleLeaveRoom} className="flex-1" />
+        
+        {isHost && !allSigned && memberCount !== 1 && (
+          <Button variant="destructive" onPress={() => handleStartTimer(true)} className="flex-1">
+            <View className="flex-row items-center justify-center">
+              <ShieldAlert color="white" size={18} />
+              <Text className="font-bold text-[16px] text-white ml-2">강제 시작</Text>
+            </View>
+          </Button>
+        )}
 
-              {isHost && allSigned && (
-                <Button disabled={isStarting} isLoading={isStarting} onPress={() => handleStartTimer(false)} className="flex-1">
-                  <View className="flex-row items-center justify-center">
-                    {!isStarting && <Play color="white" size={18} />}
-                    <Text className="font-bold text-[16px] text-white ml-2">
-                      {isStarting ? '시작 중...' : '집중 시작'}
-                    </Text>
-                  </View>
-                </Button>
-              )}
+        {isHost && (allSigned || memberCount === 1) && (
+          <Button disabled={isStarting || !isMeSigned} isLoading={isStarting} onPress={() => handleStartTimer(false)} className="flex-1">
+            <View className="flex-row items-center justify-center">
+              {!isStarting && <Play color="white" size={18} />}
+              <Text className="font-bold text-[16px] text-white ml-2">
+                {isStarting ? '시작 중...' : '집중 시작'}
+              </Text>
+            </View>
+          </Button>
+        )}
 
-              {!isHost && (
-                <Button
-                  title="서명 완료 (취소하기)"
-                  variant="outline"
-                  onPress={handleSignToggle}
-                  className="flex-1 border-[#10B981] bg-[#10B981]/10"
-                />
-              )}
-            </>
-          )}
-        </View>
+        {!isHost && (
+          <Button 
+            title={isMeSigned ? "서명 취소" : "서명하기"} 
+            variant={isMeSigned ? "outline" : "primary"} 
+            onPress={handleSignToggle} 
+            className={`flex-1 ${isMeSigned ? 'border-[#10B981] bg-[#10B981]/10' : ''}`} 
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }

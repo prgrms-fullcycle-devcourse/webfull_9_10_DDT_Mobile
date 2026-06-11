@@ -2,8 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { getToken } from '../lib/token'; // 토큰 가져오기 추가
-import { useSocket } from '../contexts/SocketContext'; // 소켓 가져오기 추가
+import { getToken } from '../lib/token';
+import { useSocket } from '../contexts/SocketContext';
 
 export interface Tier {
   tier: number;
@@ -51,7 +51,7 @@ export interface UseContractYjsReturn {
   updateField: (key: keyof ContractFields, value: number) => void;
   addTier: () => void;
   updateTier: (index: number, updated: Partial<Tier>) => void;
-  setTierBoundary: (index: number, maxPct: number) => void; // 정의 추가
+  setTierBoundary: (index: number, maxPct: number) => void;
   removeTier: (index: number) => void;
   addPenalty: (content: string) => void;
   updatePenalty: (index: number, content: string) => void;
@@ -76,8 +76,15 @@ export function useYjsContract(
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
 
+  const isHostRef = useRef(isHost);
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
+
   const [isConnected, setIsConnected] = useState(false);
-  const [fields, setFields] = useState<ContractFields>({ focusMin: 1, breakMin: 1, rounds: 1 });
+  
+  // 💡 1. 여기서 기본값을 25, 5, 4로 시작합니다.
+  const [fields, setFields] = useState<ContractFields>({ focusMin: 25, breakMin: 5, rounds: 4 });
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [fieldOwners, setFieldOwners] = useState<Record<string, FocusedField>>({});
@@ -94,7 +101,6 @@ export function useYjsContract(
 
     const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:8080';
     
-    // 비동기로 토큰을 읽어온 후 웹소켓 프로바이더 초기화
     const initYjs = async () => {
       const token = await getToken() ?? '';
       const serverUrl = `${apiDomain}/yjs?roomCode=${roomCode}&token=${encodeURIComponent(token)}`;
@@ -122,7 +128,16 @@ export function useYjsContract(
 
       provider.on('sync', (isSynced: boolean) => {
         if (!isSynced) return;
+        
+        // 💡 2. 서버 문서에 값이 아예 없을 때 (방장이 처음 접속했을 때)
         if (yjsFields.get('focusMin') === undefined) {
+          if (isHostRef.current) {
+            doc.transact(() => {
+              yjsFields.set('focusMin', 25);
+              yjsFields.set('breakMin', 5);
+              yjsFields.set('rounds', 4);
+            });
+          }
           setFields({ focusMin: 25, breakMin: 5, rounds: 4 });
         } else {
           setFields({
@@ -133,7 +148,7 @@ export function useYjsContract(
         }
         
         const currentTiers = doc.getArray<Tier>('tiers');
-        if (currentTiers.length === 0 && isHost) {
+        if (currentTiers.length === 0 && isHostRef.current) {
           doc.transact(() => {
             currentTiers.push([{ tier: 1, minPct: 0, maxPct: null, count: 0 }]);
           });
@@ -141,11 +156,13 @@ export function useYjsContract(
       });
 
       yjsFields.observe((event) => {
-        if (event.transaction.local) socket?.emit('contract:edited'); // 서명 리셋 브로드캐스트
+        if (event.transaction.local) socket?.emit('contract:edited');
+        
+        // 💡 3. 변경 감지 시에도 최소값을 25, 5, 4 로 백업 방어 (1,1,1로 돌아가는 것 방지)
         setFields({
-          focusMin: yjsFields.get('focusMin') ?? 1,
-          breakMin: yjsFields.get('breakMin') ?? 1,
-          rounds: yjsFields.get('rounds') ?? 1,
+          focusMin: yjsFields.get('focusMin') ?? 25,
+          breakMin: yjsFields.get('breakMin') ?? 5,
+          rounds: yjsFields.get('rounds') ?? 4,
         });
       });
 
@@ -169,8 +186,9 @@ export function useYjsContract(
       providerRef.current = null;
       setIsConnected(false);
     };
-  }, [roomCode, enabled, isHost, socket]);
+  }, [roomCode, enabled, socket]);
 
+  // 하단 액션 메서드들은 기존 코드와 동일합니다.
   const handleFocus = useCallback((fieldKey: string, userId: string, nickname: string) => {
     providerRef.current?.awareness.setLocalStateField('focusedField', {
       fieldKey,
@@ -218,7 +236,6 @@ export function useYjsContract(
     });
   }, []);
 
-  // 💡 누락되었던 setTierBoundary 추가 구현
   const setTierBoundary = useCallback((index: number, maxPct: number) => {
     const doc = docRef.current;
     if (!doc) return;
@@ -328,7 +345,7 @@ export function useYjsContract(
     updateField,
     addTier,
     updateTier,
-    setTierBoundary, // 노출 보장
+    setTierBoundary,
     removeTier,
     addPenalty,
     updatePenalty,

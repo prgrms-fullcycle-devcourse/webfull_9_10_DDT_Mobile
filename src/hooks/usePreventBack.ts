@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, NativeEventSubscription } from 'react-native';
 
 export function usePreventBack(onBackPress?: () => void) {
   useEffect(() => {
@@ -7,13 +7,17 @@ export function usePreventBack(onBackPress?: () => void) {
       if (onBackPress) {
         onBackPress();
       }
-      return true; 
+      return true; // true를 반환하면 기본 뒤로가기 동작을 막습니다.
     };
 
-    BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    const subscription: NativeEventSubscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackPress
+    );
     
     return () => {
-      BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+      // 💡 이전의 removeEventListener 대신 subscription.remove()를 사용합니다.
+      subscription.remove();
     };
   }, [onBackPress]);
 }

@@ -11,31 +11,52 @@ export interface RoomMember {
   socketId?: string;
   isSigned?: boolean;
   canEdit?: boolean;
+  gaveUpAt?: string | null;
+}
+
+export interface EscapeSummaryItem {
+  identifier: string;
+  totalEscapeMs: number;
+}
+
+export interface SessionInfo {
+  startedAt: number;
+  focusMin: number;
+  breakMin: number;
+  totalRounds: number;
+  serverOffset: number;
 }
 
 interface RoomStore {
   hostId: string | null;
   members: Record<string, RoomMember>;
   phase: string | null;
+  sessionInfo: SessionInfo | null;
+  escapeSummary: EscapeSummaryItem[];
 
   setState: (data: {
     hostId: string;
     members: Record<string, RoomMember>;
     phase: string;
   }) => void;
-  setPhase: (phase: string) => void;          // 👈 추가
+  setPhase: (phase: string) => void;
   upsertMember: (userId: string, member: Partial<RoomMember>) => void;
   removeMember: (userId: string) => void;
   reset: () => void;
+  
+  setSessionInfo: (info: SessionInfo | null) => void;
+  setEscapeSummary: (summary: EscapeSummaryItem[]) => void;
 }
 
 export const useRoomStore = create<RoomStore>((set) => ({
   hostId: null,
   members: {},
   phase: null,
+  sessionInfo: null,
+  escapeSummary: [],
 
   setState: (data) => set(data),
-  setPhase: (phase) => set({ phase }),        // 👈 추가
+  setPhase: (phase) => set({ phase }),
 
   upsertMember: (userId, member) =>
     set((s) => ({
@@ -50,5 +71,8 @@ export const useRoomStore = create<RoomStore>((set) => ({
       delete next[userId];
       return { members: next };
     }),
-  reset: () => set({ hostId: null, members: {}, phase: null }),
+    
+  reset: () => set({ hostId: null, members: {}, phase: null, sessionInfo: null, escapeSummary: [] }),
+  setSessionInfo: (info) => set({ sessionInfo: info }),
+  setEscapeSummary: (summary) => set({ escapeSummary: summary }),
 }));
