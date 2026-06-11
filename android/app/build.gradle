@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.ddt.mobile'
+    namespace 'com.devcourse.ddt'
     defaultConfig {
-        applicationId 'com.ddt.mobile'
+        applicationId 'com.devcourse.ddt'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -180,3 +180,5 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+apply plugin: 'com.google.gms.google-services'

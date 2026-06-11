@@ -36,14 +36,14 @@ export default function TimerScreen() {
 
   useEffect(() => {
     const registerPushToken = async () => {
-      // 안드로이드 환경일 때만 토큰 발급 및 백엔드 전송
       if (Platform.OS === 'android') {
         const token = await getDevicePushTokenAsync();
         
         if (token) {
           try {
-            // 💡 새로 생성된 Orval API 함수명은 실제 생성된 파일에 맞게 확인해주세요.
-            await getTimerApi(axiosClient).timerControllerSavePushSubscription(code, {
+            console.log('발급된 Android FCM Token:', token);
+            // 💡 Orval 생성 API 대신 직접 axiosClient 사용 (Body 누락 방지)
+            await axiosClient.post(`/rooms/${code}/push-subscription`, {
               platform: 'android',
               token: token,
             });
@@ -52,12 +52,23 @@ export default function TimerScreen() {
             console.error('푸시 토큰 등록 실패:', e);
           }
         }
+      } else if (Platform.OS === 'ios') {
+        try {
+          // 💡 iOS는 서버 푸시 대신 로컬 알림을 사용할 것임을 백엔드에 알림
+          await axiosClient.post(`/rooms/${code}/push-subscription`, {
+            platform: 'ios',
+            token: 'local_only',
+          });
+          console.log('iOS 로컬 알림 모드 백엔드 등록 완료');
+        } catch (e) {
+          console.error('iOS 로컬 모드 등록 실패:', e);
+        }
       }
     };
 
     registerPushToken();
   }, [code]);
-  
+
   // 1️⃣ 로컬 시간 계산 (1초마다 렌더링)
   useEffect(() => {
     if (!sessionInfo) return;
