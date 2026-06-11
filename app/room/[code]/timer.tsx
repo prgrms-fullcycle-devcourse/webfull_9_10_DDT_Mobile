@@ -34,6 +34,30 @@ export default function TimerScreen() {
   const isFocusRef = useRef(true);
   const lastEscapeStartRef = useRef<number>(0);
 
+  useEffect(() => {
+    const registerPushToken = async () => {
+      // 안드로이드 환경일 때만 토큰 발급 및 백엔드 전송
+      if (Platform.OS === 'android') {
+        const token = await getDevicePushTokenAsync();
+        
+        if (token) {
+          try {
+            // 💡 새로 생성된 Orval API 함수명은 실제 생성된 파일에 맞게 확인해주세요.
+            await getTimerApi(axiosClient).timerControllerSavePushSubscription(code, {
+              platform: 'android',
+              token: token,
+            });
+            console.log('푸시 토큰 백엔드 등록 완료');
+          } catch (e) {
+            console.error('푸시 토큰 등록 실패:', e);
+          }
+        }
+      }
+    };
+
+    registerPushToken();
+  }, [code]);
+  
   // 1️⃣ 로컬 시간 계산 (1초마다 렌더링)
   useEffect(() => {
     if (!sessionInfo) return;
