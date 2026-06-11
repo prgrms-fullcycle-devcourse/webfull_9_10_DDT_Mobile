@@ -96,10 +96,7 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
 
       // === 계약서 편집되어 모든 서명 리셋 ===
       s.on('sign:reset', () => {
-        const cur = useRoomStore.getState().members;
-        Object.keys(cur).forEach((uid) => {
-          upsertMember(uid, { isSigned: false });
-        });
+        useRoomStore.getState().resetAllSignatures();
       });
 
       // === 개별 멤버 편집권한 변경 ===
@@ -109,12 +106,8 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
 
       // === 전체 편집권한 토글 ===
       s.on('edit:all-updated', (payload: { canEdit: boolean }) => {
-        const cur = useRoomStore.getState().members;
-        Object.entries(cur).forEach(([uid, m]) => {
-          if (!m.isHost) upsertMember(uid, { canEdit: payload.canEdit });
-        });
+        useRoomStore.getState().updateAllNonHostsCanEdit(payload.canEdit);
       });
-
       // 💡 여기서부터 새롭게 추가된 부분입니다!
       // === 타이머 세션 시작 ===
       s.on('session:started', (data: {

@@ -9,7 +9,7 @@ export default function EditPermissionToggle() {
   const socket = useSocket();
   const me = useAuthStore((state) => state.me);
   const members = useRoomStore((state) => state.members);
-  const upsertMember = useRoomStore((state) => state.upsertMember);
+  const updateAllNonHostsCanEdit = useRoomStore((state) => state.updateAllNonHostsCanEdit); // 💡 교체
   const hostId = useRoomStore((state) => state.hostId);
 
   const isHost = me?.id === hostId;
@@ -19,12 +19,8 @@ export default function EditPermissionToggle() {
   const handleToggle = (value: boolean) => {
     if (!socket || !isHost) return;
     
-    Object.entries(members).forEach(([uid, m]) => {
-      if (!m.isHost) {
-        upsertMember(uid, { canEdit: value });
-      }
-    });
-
+    // 💡 단일 함수 호출로 모든 비방장 유저의 권한 상태를 한 번에 덮어씀 (버그 픽스)
+    updateAllNonHostsCanEdit(value);
     socket.emit('edit:all', { canEdit: value });
   };
 
