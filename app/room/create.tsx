@@ -1,7 +1,6 @@
-// app/room/create.tsx
-import React, { useState, useEffect, useRef } from 'react'; // 💡 useEffect, useRef 추가
-import { View, Text, Pressable, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Pressable, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -14,7 +13,7 @@ import axiosClient from '../../src/api/axiosClient';
 
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
-import { useActiveRoom, getActiveRoomPath } from '../../src/hooks/useActiveRoom'; // 💡 훅 임포트
+import { useActiveRoom, getActiveRoomPath } from '../../src/hooks/useActiveRoom';
 
 type Step = 'form' | 'complete';
 
@@ -92,15 +91,14 @@ function CreateRoomComplete({
 
 export default function CreateRoom() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   
-  // 💡 isLoggedIn과 me를 모두 스토어에서 가져오도록 수정
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const me = useAuthStore((state) => state.me);
   
-  // 비회원이거나 게스트일 경우를 모두 포함하여 검사
   const cannotCreate = !isLoggedIn || me?.role === 'guest';
 
-  const [step, setStep] = useState<'form' | 'complete'>('form');
+  const [step, setStep] = useState<Step>('form');
   const [roomName, setRoomName] = useState('');
   const [password, setPassword] = useState('');
   const [roomCode, setRoomCode] = useState('');
@@ -108,7 +106,6 @@ export default function CreateRoom() {
 
   const isValid = roomName.trim().length > 0 && password.length >= 4 && password.length <= 12;
   
-  // 💡 이미 활성화된 방이 있는지 확인 및 Alert 처리
   const activeRoom = useActiveRoom();
   const activeRoomPromptedRef = useRef(false);
 
@@ -150,7 +147,6 @@ export default function CreateRoom() {
   };
 
   const handleCopyAll = async () => {
-    // 💡 원하시는 텍스트 포맷으로 복사되도록 수정
     const text = `[${roomName}] 에 초대합니다\n비밀번호 : ${password}\n방 코드 : ${roomCode}\n입장 링크 : ${inviteLink}`;
     await Clipboard.setStringAsync(text);
     Alert.alert('복사 완료', '초대 정보가 클립보드에 복사되었어요!');
@@ -158,7 +154,7 @@ export default function CreateRoom() {
 
   if (cannotCreate) {
     return (
-      <SafeAreaView className="flex-1 bg-[#050816]">
+      <SafeAreaView className="flex-1 bg-[#050816]" edges={['top', 'left', 'right']}>
         <View className="flex-row items-center px-4 py-3">
           <Pressable onPress={() => router.back()} className="p-2">
             <ChevronLeft color="white" size={28} />
@@ -170,6 +166,8 @@ export default function CreateRoom() {
           <Text className="text-white/50 text-sm text-center mb-6 leading-relaxed">
             게스트는 방을 만들 수 없어요.{"\n"}회원으로 로그인 후 이용해주세요.
           </Text>
+        </View>
+        <View className="px-6 pt-2 bg-[#050816]" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <Button
             title="로그인하기"
             variant="primary"
@@ -182,71 +180,64 @@ export default function CreateRoom() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#050816]">
-      <View className="flex-row items-center justify-between px-4 py-3">
-        <View className="flex-row items-center">
-          {step === 'complete' ? (
-            <Pressable onPress={() => router.back()} className="p-2">
-              <X color="white" size={24} />
-            </Pressable>
-          ) : (
-            <Pressable onPress={() => router.back()} className="p-2">
-              <ChevronLeft color="white" size={28} />
-            </Pressable>
-          )}
-          <Text className="text-white text-lg font-bold ml-2">
-            {step === 'complete' ? '방 생성 완료 🎉' : '방 만들기'}
-          </Text>
-        </View>
-      </View>
-
-      <View className="flex-1 px-6 pt-4">
-        {step === 'form' ? (
-          <>
-            <Text className="text-center text-xl text-white/70 leading-relaxed mb-6">
-              비밀방을 생성해{"\n"}같이 집중할 멤버를 초대하세요.
+    <SafeAreaView className="flex-1 bg-[#050816]" edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View className="flex-row items-center justify-between px-4 py-3">
+          <View className="flex-row items-center">
+            {step === 'complete' ? (
+              <Pressable onPress={() => router.back()} className="p-2">
+                <X color="white" size={24} />
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => router.back()} className="p-2">
+                <ChevronLeft color="white" size={28} />
+              </Pressable>
+            )}
+            <Text className="text-white text-lg font-bold ml-2">
+              {step === 'complete' ? '방 생성 완료 🎉' : '방 만들기'}
             </Text>
+          </View>
+        </View>
 
-            <View className="bg-[#111827] border border-white/10 rounded-2xl flex-row items-center justify-center py-3 mb-8">
-              <Users color="#6B7280" size={18} />
-              <Text className="text-[#9CA3AF] text-sm ml-2">최대 10명까지 입장 가능합니다.</Text>
-            </View>
+        <ScrollView className="flex-1 px-6 pt-4" contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
+          {step === 'form' ? (
+            <>
+              <Text className="text-center text-xl text-white/70 leading-relaxed mb-6">
+                비밀방을 생성해{"\n"}같이 집중할 멤버를 초대하세요.
+              </Text>
 
-            <View className="gap-6">
-              <Input
-                label="방 이름"
-                placeholder="방 이름을 입력해주세요"
-                maxLength={20}
-                maxLengthIndicator
-                value={roomName}
-                onChangeText={setRoomName}
-              />
-
-              <View>
-                <Input
-                  label="비밀번호"
-                  placeholder="비밀번호를 입력해주세요"
-                  isPassword
-                  maxLength={12}
-                  value={password}
-                  onChangeText={setPassword}
-                />
-                <Text className="text-[#6B7280] text-xs ml-1 mt-1">· 비밀번호는 4~12자이어야 합니다.</Text>
+              <View className="bg-[#111827] border border-white/10 rounded-2xl flex-row items-center justify-center py-3 mb-8">
+                <Users color="#6B7280" size={18} />
+                <Text className="text-[#9CA3AF] text-sm ml-2">최대 10명까지 입장 가능합니다.</Text>
               </View>
-            </View>
 
-            <View className="flex-1" />
+              <View className="gap-6">
+                <Input
+                  label="방 이름"
+                  placeholder="방 이름을 입력해주세요"
+                  maxLength={20}
+                  maxLengthIndicator
+                  value={roomName}
+                  onChangeText={setRoomName}
+                />
 
-            <Button
-              title="방 만들기"
-              disabled={!isValid}
-              isLoading={createRoomMutation.isPending}
-              onPress={handleSubmit}
-              className="mb-4"
-            />
-          </>
-        ) : (
-          <>
+                <View>
+                  <Input
+                    label="비밀번호"
+                    placeholder="비밀번호를 입력해주세요"
+                    isPassword
+                    maxLength={12}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                  <Text className="text-[#6B7280] text-xs ml-1 mt-1">· 비밀번호는 4~12자이어야 합니다.</Text>
+                </View>
+              </View>
+            </>
+          ) : (
             <CreateRoomComplete
               roomName={roomName}
               password={password}
@@ -254,18 +245,29 @@ export default function CreateRoom() {
               inviteLink={inviteLink}
               onCopyAll={handleCopyAll}
             />
+          )}
+        </ScrollView>
 
-            <View className="flex-1" />
-
+        <View 
+          className="px-6 pt-2 bg-[#050816]"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          {step === 'complete' ? (
             <Button
               title="입장하기"
               variant="primary"
               onPress={() => router.push(`/room/${roomCode}`)}
-              className="mb-4"
             />
-          </>
-        )}
-      </View>
+          ) : (
+            <Button
+              title="방 만들기"
+              disabled={!isValid || createRoomMutation.isPending}
+              isLoading={createRoomMutation.isPending}
+              onPress={handleSubmit}
+            />
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

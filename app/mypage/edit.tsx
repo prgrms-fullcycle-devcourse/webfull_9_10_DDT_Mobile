@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Image, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Pressable, Image, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../src/store/useAuthStore';
@@ -25,6 +25,7 @@ const PROFILE_OPTIONS = [
 
 export default function MyPageEditScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { me, fetchMe } = useAuthStore();
   
   const initialProfileIdx = PROFILE_OPTIONS.findIndex(o => o.key === me?.profileImage);
@@ -53,55 +54,64 @@ export default function MyPageEditScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#050816]">
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10">
-        <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="p-2">
-            <ChevronLeft color="white" size={28} />
-          </Pressable>
-          <Text className="text-white text-lg font-bold ml-2">프로필 수정</Text>
+    <SafeAreaView className="flex-1 bg-[#050816]" edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10">
+          <View className="flex-row items-center">
+            <Pressable onPress={() => router.back()} className="p-2">
+              <ChevronLeft color="white" size={28} />
+            </Pressable>
+            <Text className="text-white text-lg font-bold ml-2">프로필 수정</Text>
+          </View>
         </View>
-      </View>
 
-      <View className="flex-1 px-6 pt-6 gap-8">
-        <Input
-          label="내 닉네임"
-          placeholder="변경할 닉네임 (2~10자)"
-          maxLength={10}
-          maxLengthIndicator
-          value={nickname}
-          onChangeText={setNickname}
-        />
+        <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
+          <View className="gap-8">
+            <Input
+              label="내 닉네임"
+              placeholder="변경할 닉네임 (2~10자)"
+              maxLength={10}
+              maxLengthIndicator
+              value={nickname}
+              onChangeText={setNickname}
+            />
 
-        <View className="gap-3">
-          <Text className="text-white/85 font-bold text-[15px]">프로필 이미지 선택</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible">
-            <View className="flex-row gap-3 pr-4">
-              {PROFILE_OPTIONS.map((opt, index) => (
-                <Pressable
-                  key={opt.key}
-                  onPress={() => setSelectedProfile(index)}
-                  className={`w-16 h-16 rounded-full items-center justify-center bg-[#1A1A2E] border-2 ${
-                    selectedProfile === index ? 'border-[#8B5CF6]' : 'border-transparent'
-                  }`}
-                >
-                  <Image source={opt.src} className="w-14 h-14 rounded-full" resizeMode="cover" />
-                </Pressable>
-              ))}
+            <View className="gap-3">
+              <Text className="text-white/85 font-bold text-[15px]">프로필 이미지 선택</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible">
+                <View className="flex-row gap-3 pr-4">
+                  {PROFILE_OPTIONS.map((opt, index) => (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => setSelectedProfile(index)}
+                      className={`w-16 h-16 rounded-full items-center justify-center bg-[#1A1A2E] border-2 ${
+                        selectedProfile === index ? 'border-[#8B5CF6]' : 'border-transparent'
+                      }`}
+                    >
+                      <Image source={opt.src} className="w-14 h-14 rounded-full" resizeMode="cover" />
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
             </View>
-          </ScrollView>
+          </View>
+        </ScrollView>
+
+        <View 
+          className="px-6 pt-2 bg-[#050816]"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Button
+            title="저장하기"
+            disabled={!isValid}
+            isLoading={isSaving}
+            onPress={handleSave}
+          />
         </View>
-
-        <View className="flex-1" />
-
-        <Button
-          title="저장하기"
-          disabled={!isValid}
-          isLoading={isSaving}
-          onPress={handleSave}
-          className="mb-4"
-        />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
