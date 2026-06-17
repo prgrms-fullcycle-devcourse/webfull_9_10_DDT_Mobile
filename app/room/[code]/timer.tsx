@@ -5,6 +5,8 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device'; 
+import { useKeepAwake } from 'expo-keep-awake';
+import Toast from 'react-native-toast-message';
 
 import { useSocket } from '../../../src/contexts/SocketContext';
 import { useAuthStore } from '../../../src/store/useAuthStore';
@@ -26,6 +28,7 @@ const formatEscapeTime = (ms: number) => {
 };
 
 export default function TimerScreen() {
+  useKeepAwake();
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
   const socket = useSocket();
@@ -128,7 +131,12 @@ export default function TimerScreen() {
     mutationFn: async () => (await getTimerApi(axiosClient).timerControllerGiveUp(code!)).data,
     onSuccess: () => {
       setIsModalOpen(false);
-      Alert.alert('포기 완료', '중도 포기 처리되었습니다.');
+      Toast.show({
+        type: 'error', 
+        text1: '탈옥 완료', 
+        text2: '중도 포기 처리되었습니다.',
+        position: 'top'
+      });
       router.replace(`/room/${code}/roulette?from=giveup`);
     },
     onError: (error: any) => Alert.alert('오류', error.response?.data?.message || '처리에 실패했습니다.'),
