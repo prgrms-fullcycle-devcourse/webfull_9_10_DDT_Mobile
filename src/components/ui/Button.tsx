@@ -9,6 +9,12 @@ interface ButtonProps extends PressableProps {
   children?: React.ReactNode;
 }
 
+/**
+ * 앱 전반에서 공통으로 사용되는 다목적 버튼 컴포넌트입니다.
+ * 지정된 디자인 시스템의 variant에 따라 스타일을 렌더링하며 로딩 상태 관리를 지원합니다.
+ * @param {ButtonProps} props - 버튼 컴포넌트에 주입되는 설정 객체
+ * @returns {JSX.Element} 렌더링된 버튼 인스턴스
+ */
 export const Button = ({
   title,
   variant = 'primary',
@@ -18,9 +24,10 @@ export const Button = ({
   children,
   ...props
 }: ButtonProps) => {
-  // 웹 버전(Tailwind)과 동일한 색상 매핑
+  
   const getVariantStyle = () => {
-    if (disabled || isLoading) return 'bg-[#1F2937] border-transparent'; // 비활성화 시 회색 처리
+    // API 통신 중이거나 조건이 불충족된 상태에서는 시각적으로 비활성화 처리
+    if (disabled || isLoading) return 'bg-[#1F2937] border-transparent'; 
 
     switch (variant) {
       case 'primary': return 'bg-[#7c3aed]';
@@ -33,7 +40,7 @@ export const Button = ({
   };
 
   const getTextStyle = () => {
-    if (disabled || isLoading) return 'text-[#9CA3AF]'; // 비활성화 텍스트
+    if (disabled || isLoading) return 'text-[#9CA3AF]';
 
     switch (variant) {
       case 'outline':

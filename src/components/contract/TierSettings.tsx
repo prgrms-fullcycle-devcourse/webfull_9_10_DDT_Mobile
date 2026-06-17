@@ -19,6 +19,9 @@ interface TierSettingsProps {
 
 const DEFAULT_TIER = { tier: 1, minPct: 0, maxPct: null, count: 0 };
 
+/**
+ * 이탈 시간 비율 및 확정 벌칙 부과 개수 수치를 가공 제어하고 실시간 원격 타이핑 충돌을 격리 방어해주는 미니 포커스 보완 인풋 컴포넌트입니다.
+ */
 function DraftNumberInput({ value, min, max, disabled, isOwned, ownerColor, onFocus, onBlur, onCommit }: any) {
   const [draft, setDraft] = useState(value === null ? '' : String(value));
   const isEditingRef = useRef(false);
@@ -62,6 +65,11 @@ function DraftNumberInput({ value, min, max, disabled, isOwned, ownerColor, onFo
   );
 }
 
+/**
+ * 스터디 총 진행 시간 대비 딴짓(이탈)을 저지른 비율 계층별로 적용할 총 벌칙 차등 부과 등급(티어) 수치를 조율 제어하는 구획 관리 컴포넌트입니다.
+ * @param {TierSettingsProps} props - 계층별 한계 수치 배열 정보 및 수정 권한 래퍼 함수군
+ * @returns {JSX.Element | null} 티어별 분기점 설정 박스 블록 UI
+ */
 export default function TierSettings({ tiers, addTier, updateTier, setTierBoundary, removeTier, fieldOwners, handleFocus, handleBlur }: TierSettingsProps) {
   const me = useAuthStore((s) => s.me);
   const members = useRoomStore((s) => s.members);

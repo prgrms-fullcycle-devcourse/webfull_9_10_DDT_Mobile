@@ -1,4 +1,3 @@
-// app/index.tsx
 import React, { useState } from 'react';
 import { View, Text, Modal, TextInput, ImageBackground, Image, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,9 +14,18 @@ const PHASE_LABEL: Record<string, string> = {
   timer: '집중 중',
 };
 
-// 진행 중 방 정보를 표시할 통계 박스 컴포넌트
-// 💡 StatBox 컴포넌트의 색상을 투명도 대신 명시적인 HEX 컬러로 교체
-function StatBox({ label, value, truncate }: { label: string; value: string; truncate?: boolean }) {
+interface StatBoxProps {
+  label: string;
+  value: string;
+  truncate?: boolean;
+}
+
+/**
+ * 홈 화면 하단에서 현재 참여 중인 방의 상태 정보를 직관적인 그리드 형태로 가시화해주는 미니 보드 컴포넌트입니다.
+ * @param {StatBoxProps} props - 라벨 텍스트 및 출력 값, 말줄임 여부 옵션
+ * @returns {JSX.Element} 통계 박스 레이아웃
+ */
+function StatBox({ label, value, truncate }: StatBoxProps) {
   return (
     <View className="flex-1 bg-[#1A1A2E] border border-white/20 rounded-xl px-3 py-3 items-center mx-1 my-1">
       <Text className="text-[11px] text-[#9CA3AF] mb-1">{label}</Text>
@@ -31,13 +39,17 @@ function StatBox({ label, value, truncate }: { label: string; value: string; tru
   );
 }
 
+/**
+ * 앱의 진입점이 되는 메인 홈 스크린 컴포넌트입니다.
+ * 세션 인증 상태에 따른 마이페이지/로그인 분기 처리, 활성 방 복귀 통로 및 방 코드 입력 팝업 제어를 담당합니다.
+ * @returns {JSX.Element} 메인 인트로 및 액션 보드 UI
+ */
 export default function Home() {
   const router = useRouter();
   const { isLoggedIn, me, logout } = useAuthStore();
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   
-  // 💡 활성 방 정보 가져오기
   const activeRoom = useActiveRoom();
 
   const handleEnterRoom = () => {
@@ -61,8 +73,7 @@ export default function Home() {
     >
       <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-0" />
 
-      <SafeAreaView className="flex-1 z-10 px-6 pb-8">
-        {/* 상단 버튼 영역 */}
+      <SafeAreaView className="flex-1 z-10 px-6 pb-8" edges={['top', 'left', 'right']}>
         <View className="flex-row justify-end pt-4">
           {isLoggedIn && me?.role === 'user' ? (
             <Pressable
@@ -88,7 +99,6 @@ export default function Home() {
           )}
         </View>
 
-        {/* 메인 카피 & 로고 영역 */}
         <View className="flex-1 justify-center mt-8">
           <Image 
             source={require('../assets/images/logo.webp')} 
@@ -105,7 +115,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* 💡 하단 버튼 및 활성 방 렌더링 영역 */}
         <View className="gap-3 mt-4">
           {activeRoom ? (
             <>
@@ -134,7 +143,6 @@ export default function Home() {
                 title="방 만들기"
                 variant="primary"
                 onPress={() => {
-                  // 💡 로그인하지 않았거나 게스트 유저일 경우 방 만들기 차단
                   if (!isLoggedIn || me?.role === 'guest') {
                     Alert.alert(
                       '로그인 필요',
@@ -154,9 +162,8 @@ export default function Home() {
         </View>
       </SafeAreaView>
 
-      {/* 방 코드 입력 모달 */}
       <Modal visible={showCodeModal} transparent animationType="fade">
-        <View className="flex-1 bg-black/75 justify-center px-6">
+        <View className="flex-1 bg-black/77 justify-center px-6">
           <View className="bg-[#1E2538] p-6 rounded-3xl gap-2">
             <Text className="text-white text-xl font-bold mb-1">방 코드로 입장</Text>
             <Text className="text-white/50 text-sm mb-4">초대받은 방 코드 8자리를 입력해주세요.</Text>
@@ -166,9 +173,12 @@ export default function Home() {
               placeholder="XXXXXXXX"
               placeholderTextColor="#6B7280"
               maxLength={8}
-              autoCapitalize="characters"
+              // 모바일 자판의 첫 글자 자동 대문자 변환 기능을 해제하여 소문자가 포함된 코드 입력 시 오작동 방지
+              autoCapitalize="none" 
+              // 난수 입력 도중 키보드 상단에 엉뚱한 추천 단어가 떠서 입력을 방해하는 현상 차단
+              autoCorrect={false}   
               value={roomCode}
-              onChangeText={(text) => setRoomCode(text.toUpperCase())}
+              onChangeText={setRoomCode} 
             />
             
             <View className="flex-row gap-3 mt-6">

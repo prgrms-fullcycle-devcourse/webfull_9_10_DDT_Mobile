@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, Modal, AppState, Platform, Alert } from 'react-native';
+import { View, Text, Modal, AppState, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device'; 
+import { useKeepAwake } from 'expo-keep-awake';
+import Toast from 'react-native-toast-message';
 
 import { useSocket } from '../../../src/contexts/SocketContext';
 import { useAuthStore } from '../../../src/store/useAuthStore';
@@ -25,7 +27,13 @@ const formatEscapeTime = (ms: number) => {
   return `${m}분 ${s.toString().padStart(2, '0')}초`;
 };
 
+/**
+ * 뽀모도로 세션이 개시된 후 사용자의 백그라운드 이탈(딴짓)을 감지하고 남은 세션 시간을 동기화 표출하는 코어 타이머 렌더링 스크린입니다.
+ * @returns {JSX.Element} 중앙 메인 시계 뷰 및 프로그래스 바 레이아웃
+ */
 export default function TimerScreen() {
+  useKeepAwake(); // 타이머 구동 중 디바이스 화면이 자동으로 절전 소등되는 현상 하드웨어 차단
+
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
   const socket = useSocket();
@@ -42,6 +50,7 @@ export default function TimerScreen() {
   const isFocusRef = useRef(true);
   const lastEscapeStartRef = useRef<number>(0);
 
+  // 로컬 타이머와 별개로, 앱이 백그라운드에 있을 때도 시간 종료 및 세션 페이즈 교대 알림을 정상 수신받기 위한 원격 푸시 토큰 레지스트리 발급 연동
   useEffect(() => {
     const registerPushToken = async () => {
       if (Platform.OS === 'android' && Device.isDevice) {
@@ -72,15 +81,12 @@ export default function TimerScreen() {
   useEffect(() => {
     const myMember = me ? members[me.id] : undefined;
     if (myMember?.gaveUpAt) {
+      Toast.show({ type: 'error', text1: '이미 탈옥한 방이에요.' });
       router.replace(`/room/${code}/roulette?from=giveup`);
     }
   }, [me, members, code, router]);
 
-  useEffect(() => {
-    if (phase === 'contract') router.replace(`/room/${code}/contract`);
-    else if (phase === 'result') router.replace(`/room/${code}/semi-result`);
-  }, [phase, code, router]);
-
+  // 로드 밸런싱 서버 환경에서 TCP 커넥션이 조기 드롭되는 문제를 막기 위한 프론트엔드 발 주기적 생존 핑(Heartbeat) 발송 로직
   useEffect(() => {
     if (!socket || !sessionInfo) return;
     const interval = setInterval(() => socket.emit('heartbeat'), 5000);
@@ -92,8 +98,10 @@ export default function TimerScreen() {
     if (time - lastEscapeStartRef.current < 300) return;
     lastEscapeStartRef.current = time;
     socket?.emit('escape:start');
+    Toast.show({ type: 'error', text1: '방을 이탈했어요!', text2: '이탈 시간이 누적돼요.', position: 'top' });
   }, [socket]);
 
+  // 기기의 OS 상태(AppState) 변화를 추적하여, 사용자가 앱을 최소화하거나 다른 앱으로 스위칭할 시 즉각 서버에 이탈 신호를 전송하여 벌칙 타이머 카운팅을 개시함
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (appState.current.match(/active/) && nextAppState.match(/inactive|background/)) {
@@ -111,6 +119,7 @@ export default function TimerScreen() {
         }
       } else if (nextAppState === 'active') {
         socket?.emit('escape:end');
+        // 백그라운드에 오래 머무른 후 화면 복귀 시, 세션이 이미 완전히 만료되었을 경우를 대비하여 폴백 HTTP API 조회로 스토어 강제 싱크 최신화 수행
         try {
           const res = await getRoomApi(axiosClient).roomControllerFindById(code!);
           const data = res.data as any;
@@ -128,15 +137,17 @@ export default function TimerScreen() {
     mutationFn: async () => (await getTimerApi(axiosClient).timerControllerGiveUp(code!)).data,
     onSuccess: () => {
       setIsModalOpen(false);
-      Alert.alert('포기 완료', '중도 포기 처리되었습니다.');
+      Toast.show({ type: 'error', text1: '탈옥 완료', text2: '수감 중 탈옥했습니다.' });
       router.replace(`/room/${code}/roulette?from=giveup`);
     },
-    onError: (error: any) => Alert.alert('오류', error.response?.data?.message || '처리에 실패했습니다.'),
+    onError: (error: any) => {
+      Toast.show({ type: 'error', text1: '오류', text2: error.response?.data?.message || '처리에 실패했습니다.' });
+    }
   });
 
-  // 💡 1. Early Return에 막히지 않도록 옵셔널 체이닝(?.)을 이용해 연산 에러 방지
   const focusMin = sessionInfo?.focusMin ?? 0;
   const breakMin = sessionInfo?.breakMin ?? 0;
+  // 서버와 클라이언트 디바이스간의 하드웨어 타이머 격차를 무효화하는 오프셋 보정 수치 도입하여 계산의 정밀도 향상
   const serverOffset = sessionInfo?.serverOffset ?? 0;
   const startedAt = sessionInfo?.startedAt ?? 0;
   const totalRounds = sessionInfo?.totalRounds ?? 1;
@@ -170,7 +181,6 @@ export default function TimerScreen() {
     }).catch(()=>{});
   }
 
-  // 💡 2. Hook 위치 보정 (모든 Hook은 Early Return 보다 위에 있어야 함)
   useEffect(() => {
     let notifId: string | null = null;
     if (sessionInfo && !isFocus && (breakMin * 60) >= 60) {
@@ -189,11 +199,10 @@ export default function TimerScreen() {
     };
   }, [isFocus, round, breakMin, sessionInfo]);
 
-  // 💡 3. 모든 Hook 선언이 끝난 후 제일 마지막에 Early Return 배치
   if (!me || !sessionInfo) {
     return (
       <SafeAreaView className="flex-1 bg-[#050816] items-center justify-center">
-        <Text className="text-white">로딩 중...</Text>
+        <Text className="text-white">수감 준비 중...</Text>
       </SafeAreaView>
     );
   }
@@ -213,6 +222,7 @@ export default function TimerScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816] items-center justify-between pb-8">
+      {/* OS 기본 스와이프 백 제스처를 봉인하여 타이머 도중 실수로 인한 억울한 퇴장 방지 */}
       <Stack.Screen options={{ gestureEnabled: false }} />
 
       <View className="w-full px-6 pt-4 pb-2 items-center">
@@ -253,25 +263,26 @@ export default function TimerScreen() {
       </View>
 
       <View className="w-full px-6">
-        <Button title="중도 포기" variant="outline" onPress={() => setIsModalOpen(true)} />
+        <Button title="탈옥하기" variant="outline" onPress={() => setIsModalOpen(true)} />
       </View>
 
       <Modal visible={isModalOpen} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center items-center px-6">
           <View className="bg-[#1E2538] w-full rounded-3xl p-6">
             <Text className="text-white text-lg font-bold mb-2">
-              포기하면 남은 시간이{"\n"}모두 이탈 시간으로 처리돼요.
+              탈옥하시겠어요?
             </Text>
-            <Text className="text-white/50 text-sm mb-8">가장 많은 벌칙을 받게 됩니다.</Text>
+            <Text className="text-white/50 text-sm mb-8">탈옥하면 남은 시간이 모두 이탈 시간으로 처리돼요.</Text>
             <View className="flex-row gap-3">
-              <Button 
-                title="포기하기" variant="destructive" className="flex-1" 
-                isLoading={giveUpMutation.isPending} disabled={giveUpMutation.isPending}
-                onPress={() => giveUpMutation.mutate()} 
-              />
               <Button 
                 title="취소" variant="secondary" className="flex-1" 
                 disabled={giveUpMutation.isPending} onPress={() => setIsModalOpen(false)} 
+              />
+              <Button 
+                title={giveUpMutation.isPending ? "탈옥하는 중..." : "탈옥하기"} 
+                variant="destructive" className="flex-1" 
+                isLoading={giveUpMutation.isPending} disabled={giveUpMutation.isPending}
+                onPress={() => giveUpMutation.mutate()} 
               />
             </View>
           </View>

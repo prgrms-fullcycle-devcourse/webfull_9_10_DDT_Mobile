@@ -1,15 +1,26 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { io, Socket } from 'socket.io-client';
+import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
+
 import { getToken } from '../lib/token';
 import { useRoomStore, RoomMember } from '../store/useRoomStore';
 
 const SocketContext = createContext<Socket | null>(null);
 
+/**
+ * 방 참여 시점에 타겟 룸 채널 소켓 파이프라인을 독점적으로 개설하고, 실시간으로 하달되는 분산 이벤트 프로토콜 메시지 스트림을 청취 및 스토어에 바인딩합니다.
+ * @param {Object} props - 소켓 공급 바인딩 인터페이스 객체
+ * @param {string} props.roomCode - 커넥션을 체결할 대상 고유 룸 방 번호
+ * @param {React.ReactNode} props.children - 하위 라우터 라인 트리 노드
+ * @returns {JSX.Element} 실시간 웹소켓 이벤트 터널링 공급 영역 인스턴스
+ */
 export function SocketProvider({ roomCode, children }: { roomCode: string; children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const appState = useRef(AppState.currentState);
+  const router = useRouter();
 
   const setRoomState = useRoomStore((s) => s.setState);
   const upsertMember = useRoomStore((s) => s.upsertMember);
@@ -21,7 +32,7 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
       if (socketRef.current?.connected) return;
 
       const token = await getToken();
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.x:8080';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
       const s = io(apiUrl, {
         auth: { token },
@@ -33,12 +44,6 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
       s.on('connect', () => console.log('소켓 연결 성공:', s.id));
       s.on('connect_error', (err) => console.error('소켓 연결 에러:', err.message));
 
-      // 임시 디버깅 — 안정화되면 지워도 됩니다
-      s.onAny((evt, ...args) => {
-        console.log('[SOCKET RECV]', evt, JSON.stringify(args).slice(0, 300));
-      });
-
-      // === 입장 시 전체 룸 스냅샷 ===
       s.on('room:state', (data: {
         hostId?: string;
         members?: Record<string, RoomMember>;
@@ -46,19 +51,10 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
         [key: string]: any;
       }) => {
         const members = data.members ?? {};
-        // hostId가 top-level에 없으면 members에서 isHost로 derive
-        const hostId =
-          data.hostId ??
-          Object.entries(members).find(([, m]) => m?.isHost)?.[0] ??
-          '';
-        setRoomState({
-          hostId,
-          members,
-          phase: data.phase ?? 'contract',
-        });
+        const hostId = data.hostId ?? Object.entries(members).find(([, m]) => m?.isHost)?.[0] ?? '';
+        setRoomState({ hostId, members, phase: data.phase ?? 'contract' });
       });
 
-      // === 다른 멤버가 입장 (flat spread!) ===
       s.on('member:joined', (payload: { userId: string } & Partial<RoomMember>) => {
         const { userId, ...memberData } = payload;
         upsertMember(userId, memberData);
@@ -67,49 +63,36 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
         }
       });
 
-      // === 멤버 나감 ===
       s.on('member:left', (payload: { userId: string }) => {
         removeMember(payload.userId);
       });
 
-      // === 누군가 강퇴됨 (targetId 사용!) ===
       s.on('member:kicked', (payload: { targetId: string }) => {
         removeMember(payload.targetId);
       });
 
-      // === 본인이 강퇴됨 ===
+      // 방장이 대기방 컴포넌트 목록에서 나를 지정해 Kick 명령을 서버로 브로드캐스트했을 때 네이티브 토스트 알림과 함께 즉시 메인 대시보드로 격리 수송
       s.on('kicked', () => {
-        console.warn('본인 강퇴 알림 수신');
-        // 필요하면 여기서 router.replace('/') 호출. 현재는 force-disconnect로 끊김 처리됨.
+        Toast.show({ type: 'error', text1: '안내', text2: '방장에 의해 강퇴되었어요.' });
+        router.replace('/');
       });
 
-      // === 서명 상태 변경 ===
-      s.on('sign:updated', (payload: {
-        userId: string;
-        signed: boolean;
-        signedCount: number;
-        totalCount: number;
-        allSigned: boolean;
-      }) => {
+      s.on('sign:updated', (payload: { userId: string; signed: boolean }) => {
         upsertMember(payload.userId, { isSigned: payload.signed });
       });
 
-      // === 계약서 편집되어 모든 서명 리셋 ===
       s.on('sign:reset', () => {
         useRoomStore.getState().resetAllSignatures();
       });
 
-      // === 개별 멤버 편집권한 변경 ===
       s.on('edit:updated', (payload: { targetId: string; canEdit: boolean }) => {
         upsertMember(payload.targetId, { canEdit: payload.canEdit });
       });
 
-      // === 전체 편집권한 토글 ===
       s.on('edit:all-updated', (payload: { canEdit: boolean }) => {
         useRoomStore.getState().updateAllNonHostsCanEdit(payload.canEdit);
       });
-      // 💡 여기서부터 새롭게 추가된 부분입니다!
-      // === 타이머 세션 시작 ===
+
       s.on('session:started', (data: {
         startedAt: string;
         focusMin: number;
@@ -126,35 +109,46 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
           focusMin: data.focusMin,
           breakMin: data.breakMin,
           totalRounds: data.totalRounds,
+          // 클라이언트 기기 시간 오차로 인해 남은 타이머 시간 연산이 어긋나는 버그를 차단하고자 서버 타임 스탬프 오프셋 보정 레이어 장착
           serverOffset: serverNow - clientNow,
         });
       });
 
-      // === 타이머 세션 종료 ===
       s.on('session:ended', () => {
         useRoomStore.getState().setPhase('result');
         useRoomStore.getState().setSessionInfo(null);
       });
 
-      // === 중도 포기 ===
       s.on('member:gave-up', ({ userId, gaveUpAt }: { userId: string, gaveUpAt: string }) => {
         upsertMember(userId, { gaveUpAt });
       });
 
-      // === 이탈 요약 정보 수신 ===
       s.on('escape:summary', ({ members }: { members: { identifier: string; totalEscapeMs: number }[] }) => {
         useRoomStore.getState().setEscapeSummary(members);
       });
-      // 💡 추가 끝!
 
-      // === 방 종료 ===
-      s.on('room:closed', (payload: { reason: string }) => {
-        console.warn('방 종료:', payload.reason);
+      s.on('room:closed', (payload: { reason?: string }) => {
+        Toast.show({ type: 'error', text1: '종료', text2: payload.reason ?? '방이 종료되었어요.' });
+        useRoomStore.getState().reset();
+        router.replace('/');
       });
 
-      // === 서버가 강제로 끊을 때 ===
-      s.on('force-disconnect', (payload: { reason: string }) => {
-        console.warn('Force disconnect:', payload.reason);
+      // 방 입장 실패 조건(이미 인원이 꽉 차 잠김, 비합리적 접근 토큰 등)에 수렴하여 소켓이 유실된 시점에 사유에 맞춰 유저 가이드 팝업 피드백 출력
+      s.on('force-disconnect', (data: { reason: string }) => {
+        if (data.reason === 'not-a-member') {
+          Toast.show({ type: 'error', text1: '방에 참여하지 않았어요.' });
+          router.replace(`/room/${roomCode}`);
+        } else if (data.reason === 'room-timer') {
+          Toast.show({ type: 'error', text1: '이미 진행 중인 방이에요.' });
+          router.replace('/');
+        } else if (data.reason === 'room-closed') {
+          Toast.show({ type: 'error', text1: '이미 종료된 방이에요.' });
+          router.replace('/');
+        } else if (data.reason === 'duplicate-connection') {
+          Toast.show({ type: 'error', text1: '다른 기기에서 접속이 감지되었어요.' });
+          s.io.opts.reconnection = false;
+          router.replace('/');
+        }
       });
 
       socketRef.current = s;
@@ -163,6 +157,7 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
 
     connectSocket();
 
+    // 모바일 OS 라이프사이클 정책에 의해 백그라운드 홀딩 상태로 내려갔다가 포그라운드로 완전 복귀(Wake)하는 타이밍을 캐치하여 끊어진 소켓 세션 복구 재연결 시도
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         if (socketRef.current && !socketRef.current.connected) {
@@ -183,4 +178,8 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
   return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 }
 
+/**
+ * 활성화된 소켓 통신 파이프라인 인스턴스를 서브 컴포넌트 영역에서 자유롭게 가져와 실시간 수동 데이터 Emit 처리를 수행하게 돕습니다.
+ * @returns {Socket | null} 실시간 Socket.io 소켓 오브젝트 참조 정보
+ */
 export const useSocket = () => useContext(SocketContext);

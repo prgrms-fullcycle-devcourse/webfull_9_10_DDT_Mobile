@@ -5,6 +5,10 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useRoomStore } from '../../store/useRoomStore';
 
+/**
+ * 방장이 대기실 내의 모든 비방장 참여자들에게 계약서 편집 권한을 일괄적으로 허용하거나 차단할 수 있는 스위치 토글 컴포넌트입니다.
+ * @returns {JSX.Element} 권한 제어 스위치 레이아웃
+ */
 export default function EditPermissionToggle() {
   const socket = useSocket();
   const me = useAuthStore((state) => state.me);
@@ -16,7 +20,7 @@ export default function EditPermissionToggle() {
   const hostOnly = Object.values(members).some((m) => !m.isHost && m.canEdit === false);
   const allCanEdit = !hostOnly;
 
-  // 💡 UI에서 스위치가 튕기지 않도록 로컬 상태 추가
+  // 웹소켓 패킷 브로드캐스트 지연 시간으로 인해 사용자가 스위치를 누르는 순간 물리 버튼이 반대로 자꾸 복구(튕김 연출)되는 버그를 잡기 위해 엄격한 동기화용 로컬 독립 상태 도입
   const [localToggle, setLocalToggle] = useState(allCanEdit);
 
   useEffect(() => {
@@ -26,7 +30,7 @@ export default function EditPermissionToggle() {
   const handleToggle = (value: boolean) => {
     if (!socket || !isHost) return;
     
-    setLocalToggle(value); // 즉각적인 UI 반영
+    setLocalToggle(value); 
     updateAllNonHostsCanEdit(value);
     socket.emit('edit:all', { canEdit: value });
   };

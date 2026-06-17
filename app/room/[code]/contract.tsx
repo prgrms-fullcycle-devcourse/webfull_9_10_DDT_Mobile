@@ -25,6 +25,10 @@ import MemberSignList from '../../../src/components/contract/MemberSignList';
 import { Button } from '../../../src/components/ui/Button';
 import { ContractActions } from '../../../src/components/contract/ContractActions';
 
+/**
+ * 입장 검증을 통과한 멤버들이 대기실에 모여 Yjs 기반 실시간 동시 편집 기능을 통해 계약서(타이머, 벌칙 룰)를 조율하고 전원 서명 합의 후 타이머 세션을 점화하는 스크린입니다.
+ * @returns {JSX.Element} 계약서 에디터 및 합의 컨트롤 대시보드 UI
+ */
 export default function ContractScreen() {
   const router = useRouter();
   const { code } = useGlobalSearchParams<{ code: string }>();
@@ -39,18 +43,17 @@ export default function ContractScreen() {
 
   const [isStarting, setIsStarting] = useState(false);
 
-  // 💡 방장 권한 및 내 정보 확인을 견고하게 수정
+  // 로컬 세션 정보와 소켓 서버에서 내려온 글로벌 명부 데이터를 이중 크로스 체크하여 현재 클라이언트의 방장 절대 권한 여부를 빈틈없이 검증
   const myMember = me ? members[me.id] : undefined;
   const isHost = (me?.id === hostId) || (myMember?.isHost === true);
   const isMeSigned = myMember?.isSigned ?? false;
-  const isReady = !!me && !!myMember; // 소켓에서 멤버 리스트를 다 받을 때까지 대기
+  const isReady = !!me && !!myMember; 
 
   const memberList = Object.values(members);
   const signedCount = memberList.filter((m) => m.isSigned).length;
   const memberCount = memberList.length;
   const allSigned = memberCount > 0 && signedCount === memberCount;
 
-  // 💡 isReady가 true일 때만 Yjs 연결을 활성화하여 Race Condition 방지
   const { 
     fields, updateField, 
     tiers, addTier, updateTier, setTierBoundary, removeTier,
@@ -62,6 +65,7 @@ export default function ContractScreen() {
     isHost
   );
 
+  // 앱이 백그라운드에 있다가 늦게 포그라운드로 올라오며 뒤늦게 상태 변경 패킷을 수신한 경우, 이미 다른 페이즈로 전환된 상태라면 즉시 해당 컴포넌트로 강제 포워딩
   useEffect(() => {
     if (phase === 'timer') {
       router.replace(`/room/${code}/timer`);
@@ -110,6 +114,7 @@ export default function ContractScreen() {
   const handleStartTimer = async (force: boolean) => {
     if (!isHost) return;
     
+    // 서명을 미처 누르지 못한 이탈자나 무응답자가 존재할 때, 방장이 계약 합의 딜레이를 끊어내기 위해 비합의 인원을 쳐내고 강제로 스터디를 시작할 수 있게 허용하는 관리자 전용 방어 기믹 확인창
     if (force) {
       Alert.alert(
         '강제로 시작하시겠습니까?',
@@ -183,7 +188,6 @@ export default function ContractScreen() {
         </View>
       </ScrollView>
 
-      {/* 웹 프론트엔드와 동일한 모바일 하단 버튼 레이아웃 적용 */}
       <View 
         className="px-4 py-4 bg-[#050816] border-t border-white/10 flex-row gap-2"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}

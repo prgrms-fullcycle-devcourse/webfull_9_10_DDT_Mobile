@@ -1,4 +1,3 @@
-// app/mypage/index.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +29,10 @@ const formatDuration = (ms: number) => {
   return `${mins}분`;
 };
 
+/**
+ * 로그인한 사용자의 누적 집중 통계 데이터(참여 횟수, 총 완료/이탈 시간) 및 최근 참여한 스터디방 목록 요약을 대시보드 형태로 표출하는 마이페이지 메인 홈 스크린입니다.
+ * @returns {JSX.Element} 유저 통계 보드 및 기록 링크 카드 UI
+ */
 export default function MyPageScreen() {
   const router = useRouter();
   const { me, logout } = useAuthStore();
@@ -42,15 +45,17 @@ export default function MyPageScreen() {
     const fetchData = async () => {
       try {
         const usersApi = getUsers(axiosClient);
+        // 통계 연산 API와 히스토리 목록 API를 동시 병렬 페칭하여 마이페이지 진입 시 발생하는 초반 데이터 블로킹 타임을 최소화
         const [statsRes, historyRes] = await Promise.all([
           usersApi.usersControllerGetMyStats(),
+          // 메인 대시보드 요약 화면의 UI 복잡도를 낮추기 위해 최신 이력 개수를 최대 3개로 엄격히 리미트 제한하여 호출
           usersApi.usersControllerGetMyHistory({ limit: 3 })
         ]);
         setStats((statsRes.data as any) || { totalRoomCount: 0, totalFocusMs: 0, totalEscapeMs: 0 });
         setHistory((historyRes.data as any)?.sessions?.slice(0, 3) || []);
       } catch (err) {
         console.error('마이페이지 정보 로딩 실패', err);
-      } finally {
+      } finaly {
         setIsLoading(false);
       }
     };
@@ -75,7 +80,6 @@ export default function MyPageScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816]">
-      {/* 헤더 */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/10">
         <View className="flex-row items-center">
           <Pressable onPress={() => router.replace('/')} className="p-2">
@@ -97,7 +101,6 @@ export default function MyPageScreen() {
         <View className="flex-1 justify-center items-center"><ActivityIndicator color="#7c3aed" /></View>
       ) : (
         <ScrollView className="flex-1 px-6 pt-6">
-          {/* 프로필 섹션 */}
           <View className="flex-row items-center mb-6">
             <View className="w-16 h-16 rounded-full border-2 border-[#7c3aed] bg-[#1A1A2E] overflow-hidden">
               <Image source={profileImage} className="w-full h-full" resizeMode="cover" />
@@ -108,7 +111,6 @@ export default function MyPageScreen() {
             </View>
           </View>
 
-          {/* 통계 섹션 */}
           <View className="flex-row flex-wrap gap-3 mb-8">
             <View className="flex-1 bg-[#1D1C2C] p-4 rounded-xl items-center justify-center">
               <Text className="text-[#767481] text-xs mb-1">참여한 방</Text>
@@ -124,7 +126,6 @@ export default function MyPageScreen() {
             </View>
           </View>
 
-          {/* 최근 참여 기록 */}
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-white/60 font-bold text-sm">최근 참여 기록</Text>
             <Pressable onPress={() => router.push('/mypage/history')} className="flex-row items-center">

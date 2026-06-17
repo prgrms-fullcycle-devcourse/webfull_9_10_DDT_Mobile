@@ -1,8 +1,7 @@
-// app/(auth)/terms.tsx
 import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { WebView, WebViewMessageEvent } from 'react-native-webview'; // 💡 다시 추가
+import { WebView, WebViewMessageEvent } from 'react-native-webview'; 
 import { useRouter } from 'expo-router';
 import { Check, ChevronRight, X } from 'lucide-react-native';
 import { setToken } from '../../src/lib/token';
@@ -16,6 +15,10 @@ type TermsAgreement = {
   ageVerification: boolean;
 };
 
+/**
+ * 회원가입 및 구글 소셜 로그인을 진행하기 전, 필수 약관 동의를 수집하고 웹뷰 팝업을 띄워 인증 절차를 수행하는 스크린 컴포넌트입니다.
+ * @returns {JSX.Element} 약관 동의 체크리스트 및 구글 로그인 연동 웹뷰 레이아웃
+ */
 export default function Terms() {
   const router = useRouter();
   const fetchMe = useAuthStore((state) => state.fetchMe);
@@ -45,7 +48,7 @@ export default function Terms() {
     setAgreement((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // 💡 핵심: 백엔드 스크립트가 실행되기 '직전'에 무조건 심어지는 코드
+  // 구글 로그인 완료 후 웹뷰 창이 window.opener.postMessage를 호출할 때, 리액트 네이티브 웹뷰 환경에서는 opener 가 부재하여 크래시가 나므로 전용 네이티브 브릿지 코드를 미리 강제 주입
   const INJECTED_JAVASCRIPT = `
     window.opener = {
       postMessage: function(data, targetOrigin) {
@@ -57,7 +60,6 @@ export default function Terms() {
     true;
   `;
 
-  // 1. 네이티브 메시지 통신 방식 (가장 빠르고 안정적임)
   const handleWebViewMessage = async (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
@@ -70,6 +72,7 @@ export default function Terms() {
         try {
           await getAuthApi(axiosClient).authControllerAgreeTerms(agreement);
         } catch (e: any) {
+          // 백엔드 명세상 이미 이전에 동의를 마친 기존 회원의 회원가입 재시도 시 409 에러가 리턴되므로, 이 경우는 에러 팝업을 띄우지 않고 정상 바이패스 처리
           if (e?.response?.status !== 409) {
             console.error('약관 동의 에러', e);
           }
@@ -84,10 +87,10 @@ export default function Terms() {
     }
   };
 
-  // 2. 만약을 대비한 URL 리다이렉트 폴백(Fallback)
   const handleNavigationStateChange = async (navState: any) => {
     const { url } = navState;
 
+    // postMessage 리스너가 동작하지 않는 특정 하위 OS 및 브라우저 환경을 대비해 2단계 방어막용 URL 쿼리 파라미터 파싱 폴백 로직 구축
     if (url.includes('/auth/callback?token=')) {
       setShowWebView(false);
       setIsLoading(true);
@@ -198,6 +201,18 @@ export default function Terms() {
             onNavigationStateChange={handleNavigationStateChange} 
             incognito={true}
             userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.warn('WebView error: ', nativeEvent);
+              setShowWebView(false);
+              setIsLoading(false);
+            }}
+            onHttpError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.warn('WebView HTTP error: ', nativeEvent.statusCode);
+              setShowWebView(false);
+              setIsLoading(false);
+            }}
           />
         </SafeAreaView>
       </Modal>

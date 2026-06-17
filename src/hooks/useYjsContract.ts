@@ -1,4 +1,3 @@
-// src/hooks/useYjsContract.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -61,12 +60,24 @@ export interface UseContractYjsReturn {
   applyAll: (data: ApplyData) => void;
 }
 
+/**
+ * 사용자의 고유 ID를 기반으로 동시 편집 상태(Awareness)에서 구별 가능한 고유 색상을 생성합니다.
+ * @param {string} userId - 색상을 매핑할 사용자 고유 식별자
+ * @returns {string} 헥사코드(#) 형태의 색상 문자열
+ */
 function generateColor(userId: string): string {
   const colors = ['#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#33FFF5'];
   const index = userId.charCodeAt(0) % colors.length;
   return colors[index];
 }
 
+/**
+ * Yjs CRDT 데이터 구조와 웹소켓 프로바이더를 연동하여 방 내부의 계약서 양식을 실시간으로 공유 및 동시 편집할 수 있게 합니다.
+ * @param {string} roomCode - 동 동기화 세션이 유효한 방 코드
+ * @param {boolean} enabled - 소켓 및 사용자 정보 로드가 완료되어 Yjs를 안전하게 활성화할 수 있는지 여부
+ * @param {boolean} isHost - 현재 편집 중인 사용자가 해당 방의 방장인지 여부
+ * @returns {UseContractYjsReturn} 화면 컴포넌트에서 바인딩 및 제어할 실시간 상태와 이벤트 헨들러 모음
+ */
 export function useYjsContract(
   roomCode: string,
   enabled: boolean,
@@ -83,8 +94,7 @@ export function useYjsContract(
 
   const [isConnected, setIsConnected] = useState(false);
   
-  // 💡 1. 여기서 기본값을 25, 5, 4로 시작합니다.
-  const [fields, setFields] = useState<ContractFields>({ focusMin: 25, breakMin: 5, rounds: 4 });
+  const [fields, setFields] = useState<ContractFields>({ focusMin: 1, breakMin: 1, rounds: 1 });
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [fieldOwners, setFieldOwners] = useState<Record<string, FocusedField>>({});
@@ -99,7 +109,8 @@ export function useYjsContract(
     const yjsTiers = doc.getArray<Tier>('tiers');
     const yjsPenalties = doc.getArray<Penalty>('penalties');
 
-    const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:8080';
+    // 환경 변수 기반 엔드포인트를 모바일 웹소켓 게이트웨이 스키마(ws/wss)로 실시간 치환
+    const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws');
     
     const initYjs = async () => {
       const token = await getToken() ?? '';
@@ -108,6 +119,7 @@ export function useYjsContract(
       const provider = new WebsocketProvider(serverUrl, '', doc);
       const awareness = provider.awareness;
 
+      // 동일한 공유 문서 공간 내에서 다른 사용자가 포커스 중인 입력 필드를 실시간 하이라이팅하기 위한 감지 로직
       const handleAwarenessChange = () => {
         const owners: Record<string, FocusedField> = {};
         (awareness.getStates() as Map<number, AwarenessState>).forEach((state, clientId) => {
@@ -129,7 +141,7 @@ export function useYjsContract(
       provider.on('sync', (isSynced: boolean) => {
         if (!isSynced) return;
         
-        // 💡 2. 서버 문서에 값이 아예 없을 때 (방장이 처음 접속했을 때)
+        // 서버 문서 저장소에 공유 키값이 비어있는 최초 개설 시점일 때, 방장 권한으로만 디폴트 포커싱 룰 수립
         if (yjsFields.get('focusMin') === undefined) {
           if (isHostRef.current) {
             doc.transact(() => {
@@ -158,7 +170,7 @@ export function useYjsContract(
       yjsFields.observe((event) => {
         if (event.transaction.local) socket?.emit('contract:edited');
         
-        // 💡 3. 변경 감지 시에도 최소값을 25, 5, 4 로 백업 방어 (1,1,1로 돌아가는 것 방지)
+        // 네트워크 지연으로 싱크 데이터가 순간 끊기거나 유실되었을 때 컴포넌트 수치가 1,1,1로 백업 초기화되는 현상 전면 차단
         setFields({
           focusMin: yjsFields.get('focusMin') ?? 25,
           breakMin: yjsFields.get('breakMin') ?? 5,
@@ -188,7 +200,6 @@ export function useYjsContract(
     };
   }, [roomCode, enabled, socket]);
 
-  // 하단 액션 메서드들은 기존 코드와 동일합니다.
   const handleFocus = useCallback((fieldKey: string, userId: string, nickname: string) => {
     providerRef.current?.awareness.setLocalStateField('focusedField', {
       fieldKey,

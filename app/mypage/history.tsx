@@ -1,4 +1,3 @@
-// app/mypage/history.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,10 @@ const formatDuration = (ms: number) => {
   return `${mins}분`;
 };
 
+/**
+ * 사용자가 과거에 정상 완료 및 중도 포기하여 이탈 기록이 남은 전체 스터디 히스토리 목록 데이터를 페이지네이션 조히하여 무한 리스트 형태로 출력하는 전체 이력 조회 스크린입니다.
+ * @returns {JSX.Element} 스크롤 뷰 형태의 누적 참여 이력 카드 보드 UI
+ */
 export default function MyPageHistoryScreen() {
   const router = useRouter();
   const [history, setHistory] = useState<any[]>([]);
@@ -24,7 +27,8 @@ export default function MyPageHistoryScreen() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        // limit을 크게 줘서 일단 전체 목록 느낌으로 로드 (앱 고도화 시 FlatList + 무한스크롤 권장)
+        // 단기 MVP 마일스톤 단계의 컴팩트한 사용성을 고려해 스크롤 시 파편 리스트를 한꺼번에 읽어오도록 일단 큰 수치(limit: 50)로 가상 고정 할당
+        // TODO: 추후 대용량 데이터 유입 및 렌더링 최적화를 위해 FlatList와 OnEndReached 훅 조합 기반 무한 스크롤 고도화 권장
         const res = await getUsers(axiosClient).usersControllerGetMyHistory({ limit: 50 });
         setHistory((res.data as any)?.sessions || []);
       } catch (err) {

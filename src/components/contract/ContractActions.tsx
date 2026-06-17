@@ -1,4 +1,3 @@
-// src/components/contract/ContractActions.tsx
 import React, { useState } from 'react';
 import { View, Text, Modal, TextInput, Alert, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -19,6 +18,11 @@ interface ContractActionsProps {
   applyAll: UseContractYjsReturn['applyAll'];
 }
 
+/**
+ * 계약서 화면 상단에서 현재 작성 중인 규칙(타이머, 벌칙, 티어)을 템플릿으로 보관함에 저장하거나, 기존에 저장된 템플릿 목록을 조회하여 덮어쓰는 액션 컴포넌트입니다.
+ * @param {ContractActionsProps} props - Yjs 실시간 문서 제어 상태 및 메서드 집합
+ * @returns {JSX.Element | null} 일반 회원에게만 노출되는 저장/불러오기 버튼 및 모달 UI
+ */
 export function ContractActions({ fields, tiers, penalties, applyAll }: ContractActionsProps) {
   const queryClient = useQueryClient();
   const me = useAuthStore((state) => state.me);
@@ -32,14 +36,14 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
   const [loadOpen, setLoadOpen] = useState(false);
   const [title, setTitle] = useState('');
 
-  // 저장 로직
+  // 템플릿 목록 저장 및 불러오기 모달이 실제로 활성화되었을 때만 불필요한 네트워크 트래픽을 방지하기 위해 쿼리 인에이블 제어 수행
   const { data: savedList, isLoading: isListLoading } = useQuery({
     queryKey: ['saved-rules'],
     queryFn: async () => {
       const res = await getRuleApi(axiosClient).ruleControllerGetSavedRules();
       return res.data as unknown as SavedRule[];
     },
-    enabled: loadOpen || saveOpen, // 모달이 열릴 때만 페칭
+    enabled: loadOpen || saveOpen, 
   });
 
   const saveMutation = useMutation({
@@ -47,6 +51,7 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
       const payload = toBackendFormat(fields, tiers, penalties);
       const existing = savedList?.find((r) => r.title === payloadTitle);
 
+      // 사용자가 입력한 제목과 동일한 명칭의 템플릿이 보관함에 이미 실상주하는 경우, 신규 생성 대신 덮어쓰기(PUT) 엔드포인트로 유연하게 우회 전환
       if (existing) {
         return getRuleApi(axiosClient).ruleControllerUpdateRuleTemplate(existing.ruleId, {
           title: payloadTitle,
@@ -85,6 +90,7 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
           text: '확인',
           onPress: () => {
             const yjsData = toYjsFormat(selectedRule);
+            // 원격 보관함에서 수신한 규칙 데이터를 CRDT 트랜잭션 단위로 묶어 실시간 참여자 화면에 원자적으로 일괄 주입 및 갱신
             applyAll({
               fields: yjsData.fields,
               tiers: yjsData.tiers,
@@ -99,6 +105,7 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
     );
   };
 
+  // 게스트 계정은 마이페이지 및 개인 보관함 개념이 원천 부재하므로 상단 액션 바 렌더링 스킵
   if (!me || isGuest) return null;
 
   return (
@@ -113,7 +120,6 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
         </Pressable>
       )}
 
-      {/* 저장 모달 */}
       <Modal visible={saveOpen} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center px-6">
           <View className="bg-[#1E2538] p-6 rounded-3xl gap-4">
@@ -123,7 +129,6 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
                 <X color="white" size={24} />
               </Pressable>
             </View>
-
             <TextInput
               className="bg-[#111827] text-white px-4 h-14 rounded-2xl border border-white/10"
               placeholder="저장할 계약서 이름을 입력하세요"
@@ -131,7 +136,6 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
               value={title}
               onChangeText={setTitle}
             />
-
             <Button
               title="저장하기"
               disabled={!title.trim() || saveMutation.isPending}
@@ -142,7 +146,6 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
         </View>
       </Modal>
 
-      {/* 불러오기 모달 */}
       <Modal visible={loadOpen} transparent animationType="slide">
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-[#1E2538] h-[70%] rounded-t-3xl p-6">
@@ -152,7 +155,6 @@ export function ContractActions({ fields, tiers, penalties, applyAll }: Contract
                 <X color="white" size={24} />
               </Pressable>
             </View>
-
             {isListLoading ? (
               <ActivityIndicator color="#7c3aed" className="mt-10" />
             ) : (

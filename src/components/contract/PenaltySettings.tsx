@@ -16,6 +16,9 @@ interface PenaltySettingsProps {
   handleBlur: () => void;
 }
 
+/**
+ * 개별 벌칙 항목 텍스트의 임시 수정을 바인딩하고 타이핑 도중 다른 참여자들과 레이스 컨디션 충돌이 발생하지 않도록 로컬 버퍼 상태를 제어하는 단독 인풋 서브 컴포넌트입니다.
+ */
 function PenaltyInput({ content, disabled, isOwned, ownerColor, onFocus, onBlur, onUpdate }: any) {
   const [draft, setDraft] = useState(content ?? '');
   const isEditingRef = useRef(false);
@@ -50,6 +53,11 @@ function PenaltyInput({ content, disabled, isOwned, ownerColor, onFocus, onBlur,
   );
 }
 
+/**
+ * 계약 서명 조건에 포함될 커스텀 벌칙 목록의 실시간 동적 추가, 내용 가공 및 리스트 파쇄 기능을 집약하여 바인딩하는 설정 구획 블록 컴포넌트입니다.
+ * @param {PenaltySettingsProps} props - 벌칙 어레이 상태 및 CRDT 트랜잭션 수정을 위한 트리거 모음
+ * @returns {JSX.Element | null} 벌칙 리스트 보드 UI 섹션
+ */
 export default function PenaltySettings({ penalties, addPenalty, updatePenalty, removePenalty, fieldOwners, handleFocus, handleBlur }: PenaltySettingsProps) {
   const me = useAuthStore((s) => s.me);
   const members = useRoomStore((s) => s.members);

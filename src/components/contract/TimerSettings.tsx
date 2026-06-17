@@ -1,4 +1,3 @@
-// src/components/contract/TimerSettings.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { ContractFields, FocusedField } from '../../hooks/useYjsContract';
@@ -14,6 +13,11 @@ interface TimerSettingsProps {
   handleBlur: () => void;
 }
 
+/**
+ * 상위에서 할당받은 분(Minute) 단위를 휴먼 가독성이 극대화된 시간 및 분 조합 문자열로 반환 포맷팅합니다.
+ * @param {number} minutes - 파싱 타겟 분 수치
+ * @returns {string} 파싱 조합 완료된 시간 텍스트 (ex: "2시간 30분")
+ */
 function formatTime(minutes: number): string {
   if (minutes === 0) return '0분';
   if (minutes < 60) return `${minutes}분`;
@@ -34,6 +38,9 @@ interface TimerNumberInputProps {
   onCommit: (value: number) => void;
 }
 
+/**
+ * 타이머 수치 조율창에서 사용자 터치 입력이 들어올 때 실시간 패킷 동화 처리를 전담하는 특화 수치 포커스 인풋창 컴포넌트입니다.
+ */
 function TimerNumberInput({ value, min, max, disabled, isOwned, ownerColor, onFocus, onBlur, onCommit }: TimerNumberInputProps) {
   const [draft, setDraft] = useState(String(value));
   const isEditingRef = useRef(false);
@@ -51,18 +58,19 @@ function TimerNumberInput({ value, min, max, disabled, isOwned, ownerColor, onFo
       editable={!disabled}
       onFocus={() => {
         isEditingRef.current = true;
-        setDraft(''); // 💡 터치 시 값을 비워서 즉시 입력 가능하게 함
+        // 모바일 기기 터치 입력 편의성을 극대화하기 위해 포커싱 즉시 기존 숫자를 공백 소거하여 유저가 바로 원하는 타이머 숫자를 기입할 수 있게 우회 유도
+        setDraft(''); 
         onFocus();
       }}
       onChangeText={(val) => {
-        // 모바일 환경에서 숫자 외의 값(공백, 문자 등) 필터링
+        // 안드로이드 패드 서드파티 키보드 등에서 간헐적으로 발생하는 천지인 특수문자나 공백 기입 버그를 차단하기 위해 숫자 외 데이터 정규식 필터 클렌징 적용
         const numericVal = val.replace(/[^0-9]/g, '');
         setDraft(numericVal);
         
         if (numericVal !== '') {
           const n = parseInt(numericVal, 10);
           if (!isNaN(n) && n >= min && (max === undefined || n <= max)) {
-            onCommit(n); // 범위 내의 숫자일 때만 실시간 동기화
+            onCommit(n); 
           }
         }
       }}
@@ -70,7 +78,7 @@ function TimerNumberInput({ value, min, max, disabled, isOwned, ownerColor, onFo
         isEditingRef.current = false;
         let n = parseInt(draft, 10);
         
-        // 💡 빈칸인 채로 키보드를 닫으면 최소값(1)이 아니라 '원래 있던 값'으로 원상복구
+        // 사용자가 적혀있던 숫자를 백스페이스로 다 지우고 빈칸인 상태 그대로 키보드를 닫아버릴 경우, 0분/최소값 추락 버그를 완화하기 위해 기존 실 보유값으로 원상 복구 복원
         if (isNaN(n)) {
           n = value;
         }
@@ -84,6 +92,11 @@ function TimerNumberInput({ value, min, max, disabled, isOwned, ownerColor, onFo
   );
 }
 
+/**
+ * 뽀모도로 스타일 스터디 집중 사이클의 세부 타이머 수치(단일 집중 시간, 휴식 유예 시간, 계획 총 사이클 라운드 횟수)를 정밀 제어하는 메인 컴포넌트입니다.
+ * @param {TimerSettingsProps} props - Yjs 실시간 필드 정보 및 소유주 추적 동기화 핸들러
+ * @returns {JSX.Element | null} 타이머 조율 구획 카드 패널 UI
+ */
 export default function TimerSettings({ fields, fieldOwners, updateField, handleFocus, handleBlur }: TimerSettingsProps) {
   const me = useAuthStore((s) => s.me);
   const members = useRoomStore((s) => s.members);
@@ -96,8 +109,9 @@ export default function TimerSettings({ fields, fieldOwners, updateField, handle
 
   const { focusMin, breakMin, rounds } = fields;
   const totalMin = focusMin * rounds + breakMin * Math.max(0, rounds - 1);
+  
+  // 백엔드 정책 기준 단일 세션 최대 감금 누적 상한인 10시간(600분) 한도를 초과하지 않도록 동적 맥스 리미트 한계 스펙 연산 수행
   const MAX_TOTAL_MIN = 600;
-
   const maxFocusMin = Math.max(1, Math.floor((MAX_TOTAL_MIN - breakMin * Math.max(0, rounds - 1)) / rounds));
   const maxBreakMin = rounds > 1 ? Math.max(1, Math.floor((MAX_TOTAL_MIN - focusMin * rounds) / (rounds - 1))) : 59;
   const maxRounds = Math.max(1, Math.floor(MAX_TOTAL_MIN / (focusMin + breakMin)));
@@ -175,7 +189,7 @@ export default function TimerSettings({ fields, fieldOwners, updateField, handle
 
         <View className="border-t border-white/10 my-1" />
         <View className="flex-row items-center justify-between">
-          <Text className="text-white/80 font-medium">총 예상 시간</Text>
+          <Text className="text-white/80 font-medium">진행 예정 시간</Text>
           <Text className="text-[#7c3aed] text-xl font-extrabold pr-1">{formatTime(totalMin)}</Text>
         </View>
       </View>
