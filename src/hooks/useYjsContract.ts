@@ -98,7 +98,7 @@ export function useYjsContract(
     const yjsTiers = doc.getArray<Tier>('tiers');
     const yjsPenalties = doc.getArray<Penalty>('penalties');
 
-    const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:8080';
+    const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws');
     
     const initYjs = async () => {
       const token = await getToken() ?? '';

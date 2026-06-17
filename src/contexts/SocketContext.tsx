@@ -25,7 +25,7 @@ export function SocketProvider({ roomCode, children }: { roomCode: string; child
       if (socketRef.current?.connected) return;
 
       const token = await getToken();
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.x:8080';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
       const s = io(apiUrl, {
         auth: { token },
