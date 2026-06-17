@@ -14,18 +14,13 @@ const PHASE_LABEL: Record<string, string> = {
   timer: '집중 중',
 };
 
-interface StatBoxProps {
-  label: string;
-  value: string;
-  truncate?: boolean;
-}
 
 /**
  * 홈 화면 하단에서 현재 참여 중인 방의 상태 정보를 직관적인 그리드 형태로 가시화해주는 미니 보드 컴포넌트입니다.
  * @param {StatBoxProps} props - 라벨 텍스트 및 출력 값, 말줄임 여부 옵션
  * @returns {JSX.Element} 통계 박스 레이아웃
  */
-function StatBox({ label, value, truncate }: StatBoxProps) {
+function StatBox({ label, value, truncate }: { label: string; value: string; truncate?: boolean }) {
   return (
     <View className="flex-1 bg-[#1A1A2E] border border-white/20 rounded-xl px-3 py-3 items-center mx-1 my-1">
       <Text className="text-[11px] text-[#9CA3AF] mb-1">{label}</Text>

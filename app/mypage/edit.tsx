@@ -29,7 +29,7 @@ const PROFILE_OPTIONS = [
  */
 export default function MyPageEditScreen() {
   const router = useRouter();
-  const { bottom } = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const { me, fetchMe } = useAuthStore();
   
   const initialProfileIdx = PROFILE_OPTIONS.findIndex(o => o.key === me?.profileImage);
@@ -109,7 +109,7 @@ export default function MyPageEditScreen() {
         <View 
           className="px-6 pt-2 bg-[#050816]"
           // 하단 가상 홈 버튼 홈바 바 여백 공간(inset.bottom) 유무에 따라 버튼이 화면 끝단에 딱 붙지 않도록 유연하게 안전 마진 가변 확보
-          style={{ paddingBottom: Math.max(bottom, 16) }}
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
         >
           <Button
             title="저장하기"
