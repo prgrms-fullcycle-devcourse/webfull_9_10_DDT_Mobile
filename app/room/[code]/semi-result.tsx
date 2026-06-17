@@ -101,15 +101,15 @@ export default function SemiResultScreen() {
         {/* 💡 3단 요약 통계 */}
         <View className="bg-[#1A1F31] rounded-2xl border border-white/10 flex-row py-4 mb-6">
           <View className="flex-1 items-center border-r border-white/10">
-            <Text className="text-white/50 text-xs mb-1">총 진행 시간</Text>
+            <Text className="text-white/50 text-xs mb-1">총 수감 시간</Text>
             <Text className="text-white font-bold">{totalTime}</Text>
           </View>
           <View className="flex-1 items-center border-r border-white/10">
-            <Text className="text-white/50 text-xs mb-1">완료한 반복</Text>
+            <Text className="text-white/50 text-xs mb-1">완료한 반복 횟수</Text>
             <Text className="text-white font-bold">{completedSessions}</Text>
           </View>
           <View className="flex-1 items-center">
-            <Text className="text-white/50 text-xs mb-1">벌칙 수행자</Text>
+            <Text className="text-white/50 text-xs mb-1">벌칙 대상자</Text>
             <Text className="text-white font-bold">{data?.penaltyMemberCount ?? 0}명</Text>
           </View>
         </View>
@@ -136,6 +136,7 @@ export default function SemiResultScreen() {
                   <View className="flex-1">
                     <Text className={`font-bold ${m.gaveUpAt ? 'text-[#F85A5A]' : 'text-white'} flex-shrink`} numberOfLines={1}>
                       {m.nickname} {m.isHost ? '(방장)' : ''} {isMe ? '(나)' : ''}
+                      {m.gaveUpAt ? ' (탈옥)' : ''}
                     </Text>
                   </View>
                 </View>
