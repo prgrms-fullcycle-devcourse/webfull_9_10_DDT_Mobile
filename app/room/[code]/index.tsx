@@ -26,6 +26,10 @@ const PROFILE_OPTIONS = [
   { key: 'basic_image_key_10', src: require('../../../assets/images/avatars/shiba.png') },
 ];
 
+/**
+ * 딥링크 혹은 홈 화면 코드를 통해 진입한 사용자가 방 내부(대기실)로 최종 입장하기 전 닉네임과 비밀번호를 검증받는 인터셉트 스크린입니다.
+ * @returns {JSX.Element} 방 입장 검증 폼 UI
+ */
 export default function JoinRoom() {
   const router = useRouter();
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -85,6 +89,7 @@ export default function JoinRoom() {
     if (!isValid) return;
 
     let submitPassword = password;
+    // 방 개설 직후 자동 라우팅되어 입장 폼에 도달한 방장일 경우, 수동 입력을 우회하고 로컬 스토리지에 백업된 비밀번호를 꺼내어 제출 패킷 조립
     if (isHost) {
       const savedPw = await SecureStore.getItemAsync(`hostPassword_${code}`);
       submitPassword = savedPw ?? '';

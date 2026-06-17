@@ -1,4 +1,3 @@
-// app/room/[code]/total-result.tsx
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, Share, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,6 +40,10 @@ const formatEscapeTime = (totalMs: number) => {
   return `${minutes}분 ${seconds.toString().padStart(2, '0')}초`;
 };
 
+/**
+ * 모든 인원의 룰렛 이벤트가 종료되거나 아무도 이탈하지 않은 완벽한 스터디가 끝난 후, 최종적으로 합산된 타인들의 상세 벌칙 내역 및 이탈 시간 기록표를 종합하여 보여주는 스크린입니다.
+ * @returns {JSX.Element} 결과 리스트 보드 및 공유/홈귀환 액션 트리 UI
+ */
 export default function TotalResultScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
@@ -56,6 +59,7 @@ export default function TotalResultScreen() {
     queryFn: async () => (await getResultApi(axiosClient).resultControllerGetResult(code!)).data as any,
   });
 
+  // 네이티브 OS 레벨의 소셜 셰어 모듈을 호출하여, 달성한 방 링크 성취 내역을 메신저 및 외부 앱으로 클립보드 내보내기 연동 지원
   const handleShare = async () => {
     try {
       await Share.share({
@@ -81,6 +85,7 @@ export default function TotalResultScreen() {
   }
 
   const isNoDisruption = data?.allClear;
+  // 중간 정산 화면과 마찬가지로 이탈 시간 동률 시 역순 우선 배치 알고리즘으로 벌칙자에 대한 랭킹을 철저하게 계산 정렬
   const rankedMembers = [...(data?.members || [])].sort((a: any, b: any) => a.rank - b.rank || b.totalEscapeMs - a.totalEscapeMs);
   const penaltyMembers = rankedMembers.filter((m: any) => m.penalties?.totalCount > 0);
   
@@ -102,7 +107,6 @@ export default function TotalResultScreen() {
           <Text className="text-white/70 text-sm">약속한 집중 시간을 완료했어요.</Text>
         </View>
 
-        {/* 💡 3단 요약 통계 */}
         <View className="bg-[#1A1F31] rounded-2xl border border-white/10 flex-row py-4 mb-6">
           <View className="flex-1 items-center border-r border-white/10">
             <Text className="text-white/50 text-xs mb-1">총 수감 시간</Text>
@@ -118,7 +122,6 @@ export default function TotalResultScreen() {
           </View>
         </View>
 
-        {/* 이탈 시간 순위 */}
         <Text className="text-white/50 text-xs font-bold mb-2 ml-1">이탈 시간 순위</Text>
         <View className="bg-[#151926] rounded-2xl border border-white/10 overflow-hidden mb-6">
           {rankedMembers.map((m: any, i: number) => {
@@ -155,7 +158,6 @@ export default function TotalResultScreen() {
           })}
         </View>
 
-        {/* 멤버별 벌칙 결과 */}
         {!isNoDisruption && (
           <>
             <Text className="text-white/50 text-xs font-bold mb-2 ml-1">수감자 별 벌칙 결과</Text>
@@ -211,7 +213,6 @@ export default function TotalResultScreen() {
         )}
       </ScrollView>
 
-      {/* 💡 하단 고정 버튼 */}
       <View className="p-4 border-t border-white/10 flex-row gap-3 bg-[#050816]">
         <Button 
           variant="secondary" 

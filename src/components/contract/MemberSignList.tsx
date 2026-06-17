@@ -5,7 +5,6 @@ import { useSocket } from '../../contexts/SocketContext';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useRoomStore } from '../../store/useRoomStore';
 
-// 에셋 이미지 매핑 객체
 const PROFILE_MAP: Record<string, any> = {
   basic_image_key_01: require('../../../assets/images/avatars/bear.png'),
   basic_image_key_02: require('../../../assets/images/avatars/cat.png'),
@@ -19,6 +18,10 @@ const PROFILE_MAP: Record<string, any> = {
   basic_image_key_10: require('../../../assets/images/avatars/shiba.png'),
 };
 
+/**
+ * 현재 방에 들어와 있는 모든 대기 유저 명단을 시각화하고, 각 사용자의 계약서 최종 준비 서명 동향 확인 및 방장의 참여자 개별 추방/편집권 위임을 관장하는 리스트 컴포넌트입니다.
+ * @returns {JSX.Element | null} 현재 방의 활성 인원 상태 제어 명단 UI
+ */
 export default function MemberSignList() {
   const socket = useSocket();
   const me = useAuthStore((state) => state.me);
@@ -32,7 +35,6 @@ export default function MemberSignList() {
   const myMember = members[me.id];
   const isMeSigned = myMember?.isSigned ?? false;
   const memberList = Object.entries(members);
-  const signedCount = memberList.filter(([, m]) => m.isSigned).length;
 
   const handleKickMember = (targetId: string, nickname: string) => {
     if (!isHost) return;
@@ -76,7 +78,7 @@ export default function MemberSignList() {
             </View>
           </View>
           
-          {/* 💡 정적인 View에서 작동 가능한 Pressable로 변경 */}
+          {/* 정적 터치 오동작을 최소화하고 명확한 서명 처리를 위해 가시성 높은 Pressable 컨테이너 컴포넌트로 이식 고도화 */}
           <Pressable onPress={handleSignToggle} className="active:opacity-70">
             {isMeSigned ? (
               <View className="bg-[#10B981]/20 px-3 py-1.5 rounded-full flex-row items-center">
@@ -91,7 +93,6 @@ export default function MemberSignList() {
           </Pressable>
         </View>
 
-        {/* 다른 멤버들 */}
         {memberList.filter(([id]) => id !== me.id).map(([id, m], index) => (
           <View key={id} className={`flex-row items-center justify-between p-4 ${index !== memberList.length - 2 ? 'border-b border-white/5' : ''}`}>
             <View className="flex-row items-center flex-1">
@@ -113,7 +114,6 @@ export default function MemberSignList() {
               </View>
             </View>
 
-            {/* 방장일 경우: 권한 토글 및 강퇴 버튼 */}
             {isHost ? (
               <View className="flex-row items-center gap-3">
                 <Switch
@@ -127,7 +127,6 @@ export default function MemberSignList() {
                 </Pressable>
               </View>
             ) : (
-              // 방장이 아닐 경우 서명 상태 표시
               m.isSigned ? (
                 <View className="bg-[#10B981]/20 px-3 py-1.5 rounded-full flex-row items-center">
                   <Check color="#10B981" size={14} strokeWidth={3} />

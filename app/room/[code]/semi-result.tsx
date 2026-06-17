@@ -1,4 +1,3 @@
-// app/room/[code]/semi-result.tsx
 import React, { useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,12 +39,16 @@ const formatEscapeTime = (totalMs: number) => {
   return `${minutes}분 ${seconds.toString().padStart(2, '0')}초`;
 };
 
+/**
+ * 모든 뽀모도로 세션이 강제 혹은 자연 만료된 직후 진입하여, 방 전체 멤버의 누적 이탈 랭킹을 정렬해 보여주고 룰렛이 남아있는 대상자를 판별하는 중간 정산 컴포넌트입니다.
+ * @returns {JSX.Element} 순위 테이블 및 다음 액션 진입 분기 버튼 UI
+ */
 export default function SemiResultScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
   const me = useAuthStore((s) => s.me);
 
-  // 뒤로가기 차단
+  // 결과 화면에 진입한 유저가 하드웨어 뒤로가기로 우회하여 종료된 타이머로 재진입하는 어뷰징 완벽 차단
   usePreventBack(() => {
     console.log('결과 화면에서는 뒤로 갈 수 없습니다.');
   });
@@ -59,9 +62,9 @@ export default function SemiResultScreen() {
   });
 
   const isNoDisruption = data?.allClear;
+  // 순위값이 동일할 경우, 두 번째 정렬 기준으로 누적 이탈 시간이 더 긴 사람을 역순으로 강제 최상단으로 끌어올리는 정밀 소팅 로직 탑재
   const rankedMembers = [...(data?.members || [])].sort((a: any, b: any) => a.rank - b.rank || b.totalEscapeMs - a.totalEscapeMs);
   
-  // 💡 내 정보 찾기 (guestToken 또는 userId로 매칭)
   const myResult = me ? rankedMembers.find((member: any) => 
     me.role === 'user' ? member.userId === me.id : member.guestToken === me.id
   ) : null;
@@ -70,7 +73,7 @@ export default function SemiResultScreen() {
   const totalTime = formatSessionTime(data?.totalSessionMs ?? null);
   const completedSessions = data?.rule ? `${data.completedRounds ?? 0} / ${data.rule.rounds}` : '-';
 
-  // 아무도 이탈하지 않았다면 바로 최종 결과로 스킵
+  // 단 한 명의 참가자도 딴짓하지 않고 전원이 성공한 이상적인 상태라면, 굳이 중간 정산 페이지에 머물게 할 필요 없이 최종 축하 리포트 뷰로 즉시 포워딩
   useEffect(() => {
     if (isNoDisruption) {
       router.replace(`/room/${code}/total-result`);
@@ -98,7 +101,6 @@ export default function SemiResultScreen() {
           <Text className="text-white/50 text-sm">결과를 확인해 주세요.</Text>
         </View>
 
-        {/* 💡 3단 요약 통계 */}
         <View className="bg-[#1A1F31] rounded-2xl border border-white/10 flex-row py-4 mb-6">
           <View className="flex-1 items-center border-r border-white/10">
             <Text className="text-white/50 text-xs mb-1">총 수감 시간</Text>

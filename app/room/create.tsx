@@ -17,6 +17,11 @@ import { useActiveRoom, getActiveRoomPath } from '../../src/hooks/useActiveRoom'
 
 type Step = 'form' | 'complete';
 
+/**
+ * 방 생성이 완료되었을 때 입장 코드, 비밀번호, 딥링크 정보를 요약해서 보여주고 클립보드 복사를 지원하는 서브 컴포넌트입니다.
+ * @param {Object} props - 방 생성 완료 메타 데이터 및 복사 이벤트 핸들러
+ * @returns {JSX.Element} 방 개설 완료 요약 카드 UI
+ */
 function CreateRoomComplete({
   roomName,
   password,
@@ -89,6 +94,11 @@ function CreateRoomComplete({
   );
 }
 
+/**
+ * 로그인한 사용자가 신규 집중 스터디 룸을 개설하는 화면입니다.
+ * 개설 성공 시 기기 로컬 저장소에 방장 권한 및 비밀번호를 세션별로 캐싱하여 자동 입장을 지원합니다.
+ * @returns {JSX.Element} 방 개설 폼 및 완료 결과 화면
+ */
 export default function CreateRoom() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -96,6 +106,7 @@ export default function CreateRoom() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const me = useAuthStore((state) => state.me);
   
+  // 백엔드 정책상 일회성 게스트 계정은 무분별한 방 생성 어뷰징 방지를 위해 개설 권한을 원천 차단함
   const cannotCreate = !isLoggedIn || me?.role === 'guest';
 
   const [step, setStep] = useState<Step>('form');
@@ -109,6 +120,7 @@ export default function CreateRoom() {
   const activeRoom = useActiveRoom();
   const activeRoomPromptedRef = useRef(false);
 
+  // 이미 다른 방의 세션(타이머/룰렛 등)에 종속되어 있는 경우, 이탈 방지를 위해 방 생성 화면 진입 즉시 복귀 유도 팝업을 강제 띄움
   useEffect(() => {
     if (!activeRoom || activeRoomPromptedRef.current) return;
     
@@ -131,8 +143,11 @@ export default function CreateRoom() {
     onSuccess: async (data) => {
       setRoomCode(data.code);
       setInviteLink(data.url);
+      
+      // 개설자가 방 입장 폼에서 비밀번호를 다시 치는 번거로움을 생략하기 위해 로컬 보안 키체인에 방장 인증 토큰 성격으로 임시 기록
       await SecureStore.setItemAsync(`isHost_${data.code}`, 'true');
       await SecureStore.setItemAsync(`hostPassword_${data.code}`, password);
+      
       setStep('complete');
     },
     onError: (err: any) => {

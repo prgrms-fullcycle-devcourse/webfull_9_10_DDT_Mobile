@@ -7,6 +7,11 @@ interface RoomTitleProps {
   isConnected: boolean;
 }
 
+/**
+ * 대기방의 메인 최상단 카드 섹션으로, 방 고유 한글 타이틀 명칭, 난수 방 코드 식별자 및 실시간 웹소켓 서버 연동 핑 신호 상태를 모니터링 출력하는 컴포넌트입니다.
+ * @param {RoomTitleProps} props - 가시화할 방 고유 명부 및 통신 싱크 상태 플래그
+ * @returns {JSX.Element} 최상단 타이틀 안내 블록 UI
+ */
 export default function RoomTitle({ title, code, isConnected }: RoomTitleProps) {
   return (
     <View className="bg-[#111827] border border-white/10 rounded-2xl p-5 mb-4 mx-4 mt-4">

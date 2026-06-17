@@ -14,7 +14,11 @@ import { usePreventBack } from '../../../src/hooks/usePreventBack';
 import { Button } from '../../../src/components/ui/Button';
 import { useAuthStore } from '../../../src/store/useAuthStore';
 
-// 💡 스포트라이트 애니메이션 오버레이 컴포넌트 추가
+/**
+ * 당첨된 벌칙 결과를 강조하여 띄우는 시각적 스포트라이트 포커스 애니메이션 렌더링 오버레이 컴포넌트입니다.
+ * @param {Object} props - 출력할 당첨 확정 벌칙 라벨 텍스트
+ * @returns {JSX.Element} 검은 반투명 필터 레이어
+ */
 function SpotlightOverlay({ label }: { label: string }) {
   return (
     <View className="absolute top-0 left-0 right-0 bottom-0 z-50 justify-center items-center bg-black/85">
@@ -28,6 +32,10 @@ function SpotlightOverlay({ label }: { label: string }) {
   );
 }
 
+/**
+ * 딴짓이나 탈옥으로 인해 누적 이탈 시간이 티어를 초과한 대상자가 자신에게 부과된 잔여 페널티 횟수만큼 벌칙 휠을 직접 스핀하는 인터랙티브 게이미피케이션 스크린입니다.
+ * @returns {JSX.Element} 메인 룰렛 보드 및 남은 스핀 횟수 제어 UI
+ */
 export default function RouletteScreen() {
   const { code, from } = useLocalSearchParams<{ code: string; from?: string }>();
   const router = useRouter();
@@ -42,14 +50,14 @@ export default function RouletteScreen() {
   const [targetIndex, setTargetIndex] = useState(0);
   const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
 
-  // 1. 일반 결과 조회
+  // 일반 완주자의 룰렛 진입 결과 로드용 쿼리
   const { data: resultData, isLoading: isResultLoading } = useQuery({
     queryKey: ['result', code],
     queryFn: async () => (await getResultApi(axiosClient).resultControllerGetResult(code!)).data as any,
     enabled: !isGiveUpRoulette,
   });
 
-  // 2. 중도 포기 결과 조회
+  // 중간 포기(탈옥) 유저의 경우 일반 리절트 엔드포인트 접근이 차단되므로 전용 기브업 라우트로 분기 조회
   const { data: giveUpData, isLoading: isGiveUpLoading } = useQuery({
     queryKey: ['giveUpResult', code],
     queryFn: async () => (await getRouletteApi(axiosClient).rouletteControllerGetGiveUpResult(code!)).data as any,
@@ -82,7 +90,7 @@ export default function RouletteScreen() {
     },
   });
 
-  // 💡 자동 전체 공개(나가기) API 호출
+  // 벌칙 스핀 횟수가 남았음에도 고의로 화면을 이탈하려 하거나 타임아웃(rage-quit)이 발생했을 시, 나머지 기회를 서버단에서 자동 무작위 차감 확정시켜버리는 방어 백도어 트리거
   const exitMutation = useMutation({
     mutationFn: async () => {
       await getRouletteApi(axiosClient).rouletteControllerExitRoulette(code!);
@@ -109,7 +117,7 @@ export default function RouletteScreen() {
     
   const remainingChances = Math.max(0, totalChances - spinCount);
 
-  // 💡 룰렛 진행 중 뒤로가기 버튼 액션
+  // 사용자가 아직 다 소모하지 못한 벌칙 횟수가 있는데 뒤로가기 제스처를 긁었을 경우, 이를 블로킹하고 자동 전면 페널티 확정 징수 안내 모달을 출력
   usePreventBack(() => {
     if (isSpinning) return;
     if (remainingChances > 0) {
@@ -161,7 +169,7 @@ export default function RouletteScreen() {
     setResultPenalty(currentContent);
     setSpinCount(prev => prev + 1);
 
-    // 💡 스포트라이트 표시 (2.4초 후 사라짐)
+    // 사용자의 시선을 집중시키기 위해 스포트라이트 오버레이를 트리거하고 시각 피로도를 고려해 2.4초 뒤 자연 페이드 아웃 연출
     if (currentContent) {
       setSpotlightLabel(currentContent);
       setTimeout(() => setSpotlightLabel(null), 2400);
@@ -184,7 +192,6 @@ export default function RouletteScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816]">
-      {/* 💡 스포트라이트 오버레이 */}
       {spotlightLabel && <SpotlightOverlay label={spotlightLabel} />}
 
       <View className="flex-row items-center justify-between px-4 py-4">
@@ -236,7 +243,6 @@ export default function RouletteScreen() {
         />
       </View>
 
-      {/* 💡 나가기(자동 공개) 모달 */}
       <Modal visible={isExitDialogOpen} transparent animationType="fade">
         <View className="flex-1 bg-black/75 justify-center px-6">
           <View className="bg-[#1E2538] p-6 rounded-3xl gap-4">

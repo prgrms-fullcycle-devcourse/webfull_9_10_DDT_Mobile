@@ -23,6 +23,10 @@ const PROFILE_OPTIONS = [
   { key: 'basic_image_key_10', src: require('../../assets/images/avatars/shiba.png') },
 ];
 
+/**
+ * 로그인 회원이 폼 요소를 통해 자신의 고유 서비스 닉네임 문자열 및 지정 아바타 프로필 아이콘 인덱스 키값을 편집 최신화하는 수정 스크린 컴포넌트입니다.
+ * @returns {JSX.Element} 프로필 항목 갱신 인풋 창 및 수평 에셋 가로 스크롤 카드 레이아웃
+ */
 export default function MyPageEditScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -34,6 +38,7 @@ export default function MyPageEditScreen() {
   const [selectedProfile, setSelectedProfile] = useState(initialProfileIdx >= 0 ? initialProfileIdx : 0);
   const [isSaving, setIsSaving] = useState(false);
 
+  // 기획 및 DB 제약 조건 명세에 규정된 최소 2자 이상, 최대 10자 이하 바운더리에 부합하는지 밸리데이션 검증식 수립
   const isValid = nickname.trim().length >= 2 && nickname.trim().length <= 10;
 
   const handleSave = async () => {
@@ -55,6 +60,7 @@ export default function MyPageEditScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816]" edges={['top', 'left', 'right']}>
+      {/* 안드로이드는 자체 OS 레이아웃단에서 인풋 포커싱 시 자동 리사이징이 처리되나, iOS 단말기는 하단 키보드 패널이 인풋창을 가려 보이지 않는 현상이 있으므로 패딩 회피 모드 적용 */}
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -102,6 +108,7 @@ export default function MyPageEditScreen() {
 
         <View 
           className="px-6 pt-2 bg-[#050816]"
+          // 하단 가상 홈 버튼 홈바 바 여백 공간(inset.bottom) 유무에 따라 버튼이 화면 끝단에 딱 붙지 않도록 유연하게 안전 마진 가변 확보
           style={{ paddingBottom: Math.max(insets.bottom, 16) }}
         >
           <Button

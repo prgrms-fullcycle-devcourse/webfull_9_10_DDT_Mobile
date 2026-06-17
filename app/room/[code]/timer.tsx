@@ -27,8 +27,12 @@ const formatEscapeTime = (ms: number) => {
   return `${m}분 ${s.toString().padStart(2, '0')}초`;
 };
 
+/**
+ * 뽀모도로 세션이 개시된 후 사용자의 백그라운드 이탈(딴짓)을 감지하고 남은 세션 시간을 동기화 표출하는 코어 타이머 렌더링 스크린입니다.
+ * @returns {JSX.Element} 중앙 메인 시계 뷰 및 프로그래스 바 레이아웃
+ */
 export default function TimerScreen() {
-  useKeepAwake(); // 화면 꺼짐 방지
+  useKeepAwake(); // 타이머 구동 중 디바이스 화면이 자동으로 절전 소등되는 현상 하드웨어 차단
 
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
@@ -46,6 +50,7 @@ export default function TimerScreen() {
   const isFocusRef = useRef(true);
   const lastEscapeStartRef = useRef<number>(0);
 
+  // 로컬 타이머와 별개로, 앱이 백그라운드에 있을 때도 시간 종료 및 세션 페이즈 교대 알림을 정상 수신받기 위한 원격 푸시 토큰 레지스트리 발급 연동
   useEffect(() => {
     const registerPushToken = async () => {
       if (Platform.OS === 'android' && Device.isDevice) {
@@ -81,11 +86,7 @@ export default function TimerScreen() {
     }
   }, [me, members, code, router]);
 
-  useEffect(() => {
-    if (phase === 'contract') router.replace(`/room/${code}/contract`);
-    else if (phase === 'result') router.replace(`/room/${code}/semi-result`);
-  }, [phase, code, router]);
-
+  // 로드 밸런싱 서버 환경에서 TCP 커넥션이 조기 드롭되는 문제를 막기 위한 프론트엔드 발 주기적 생존 핑(Heartbeat) 발송 로직
   useEffect(() => {
     if (!socket || !sessionInfo) return;
     const interval = setInterval(() => socket.emit('heartbeat'), 5000);
@@ -100,6 +101,7 @@ export default function TimerScreen() {
     Toast.show({ type: 'error', text1: '방을 이탈했어요!', text2: '이탈 시간이 누적돼요.', position: 'top' });
   }, [socket]);
 
+  // 기기의 OS 상태(AppState) 변화를 추적하여, 사용자가 앱을 최소화하거나 다른 앱으로 스위칭할 시 즉각 서버에 이탈 신호를 전송하여 벌칙 타이머 카운팅을 개시함
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (appState.current.match(/active/) && nextAppState.match(/inactive|background/)) {
@@ -117,6 +119,7 @@ export default function TimerScreen() {
         }
       } else if (nextAppState === 'active') {
         socket?.emit('escape:end');
+        // 백그라운드에 오래 머무른 후 화면 복귀 시, 세션이 이미 완전히 만료되었을 경우를 대비하여 폴백 HTTP API 조회로 스토어 강제 싱크 최신화 수행
         try {
           const res = await getRoomApi(axiosClient).roomControllerFindById(code!);
           const data = res.data as any;
@@ -144,6 +147,7 @@ export default function TimerScreen() {
 
   const focusMin = sessionInfo?.focusMin ?? 0;
   const breakMin = sessionInfo?.breakMin ?? 0;
+  // 서버와 클라이언트 디바이스간의 하드웨어 타이머 격차를 무효화하는 오프셋 보정 수치 도입하여 계산의 정밀도 향상
   const serverOffset = sessionInfo?.serverOffset ?? 0;
   const startedAt = sessionInfo?.startedAt ?? 0;
   const totalRounds = sessionInfo?.totalRounds ?? 1;
@@ -218,6 +222,7 @@ export default function TimerScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#050816] items-center justify-between pb-8">
+      {/* OS 기본 스와이프 백 제스처를 봉인하여 타이머 도중 실수로 인한 억울한 퇴장 방지 */}
       <Stack.Screen options={{ gestureEnabled: false }} />
 
       <View className="w-full px-6 pt-4 pb-2 items-center">
