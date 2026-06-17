@@ -105,20 +105,20 @@ export default function TotalResultScreen() {
         {/* 💡 3단 요약 통계 */}
         <View className="bg-[#1A1F31] rounded-2xl border border-white/10 flex-row py-4 mb-6">
           <View className="flex-1 items-center border-r border-white/10">
-            <Text className="text-white/50 text-xs mb-1">총 진행 시간</Text>
+            <Text className="text-white/50 text-xs mb-1">총 수감 시간</Text>
             <Text className="text-white font-bold">{totalTime}</Text>
           </View>
           <View className="flex-1 items-center border-r border-white/10">
-            <Text className="text-white/50 text-xs mb-1">완료한 반복</Text>
+            <Text className="text-white/50 text-xs mb-1">완료한 반복 횟수</Text>
             <Text className="text-white font-bold">{completedSessions}</Text>
           </View>
           <View className="flex-1 items-center">
-            <Text className="text-white/50 text-xs mb-1">벌칙 수행자</Text>
+            <Text className="text-white/50 text-xs mb-1">벌칙 대상자</Text>
             <Text className="text-white font-bold">{isNoDisruption ? '0명' : `${data?.penaltyMemberCount ?? 0}명`}</Text>
           </View>
         </View>
 
-        {/* 💡 이탈 시간 순위 */}
+        {/* 이탈 시간 순위 */}
         <Text className="text-white/50 text-xs font-bold mb-2 ml-1">이탈 시간 순위</Text>
         <View className="bg-[#151926] rounded-2xl border border-white/10 overflow-hidden mb-6">
           {rankedMembers.map((m: any, i: number) => {
@@ -139,6 +139,7 @@ export default function TotalResultScreen() {
                   <View className="flex-1">
                     <Text className={`font-bold ${m.gaveUpAt ? 'text-[#F85A5A]' : 'text-white'} flex-shrink`} numberOfLines={1}>
                       {m.nickname} {m.isHost ? '(방장)' : ''} {isMe ? '(나)' : ''}
+                      {m.gaveUpAt ? ' (탈옥)' : ''}
                     </Text>
                   </View>
                 </View>
@@ -154,10 +155,10 @@ export default function TotalResultScreen() {
           })}
         </View>
 
-        {/* 💡 멤버별 벌칙 결과 */}
+        {/* 멤버별 벌칙 결과 */}
         {!isNoDisruption && (
           <>
-            <Text className="text-white/50 text-xs font-bold mb-2 ml-1">멤버별 벌칙 결과</Text>
+            <Text className="text-white/50 text-xs font-bold mb-2 ml-1">수감자 별 벌칙 결과</Text>
             <View className="bg-[#151926] rounded-2xl border border-white/10 overflow-hidden mb-10">
               {penaltyMembers.length > 0 ? penaltyMembers.map((m: any, idx: number) => {
                 const isMe = me && (me.role === 'user' ? m.userId === me.id : m.guestToken === me.id);
@@ -178,7 +179,7 @@ export default function TotalResultScreen() {
                       </View>
                       <View className="flex-row items-center">
                         <Text className={`text-xs mr-2 font-bold ${isPending ? 'text-white/40' : 'text-[#F85A5A]'}`}>
-                          {isPending ? '벌칙 뽑는 중' : `총 ${m.penalties.totalCount}개`}
+                          {isPending ? '벌칙 결정 중' : `총 ${m.penalties.totalCount}개`}
                         </Text>
                         {isExpanded ? <ChevronUp color="gray" size={16} /> : <ChevronDown color="gray" size={16} />}
                       </View>
@@ -187,7 +188,7 @@ export default function TotalResultScreen() {
                     {isExpanded && (
                       <View className="bg-[#0f0f1a] px-5 py-3 border-t border-white/5">
                         {isPending ? (
-                          <Text className="text-center text-white/50 text-sm py-2">벌칙을 뽑고 있어요.</Text>
+                          <Text className="text-center text-white/50 text-sm py-2">벌칙을 결정하고 있어요.</Text>
                         ) : (
                           m.penalties.items.map((p: any, i: number) => (
                             <View key={i} className="flex-row justify-between items-center py-1.5">
@@ -202,7 +203,7 @@ export default function TotalResultScreen() {
                 );
               }) : (
                 <View className="p-6 items-center">
-                  <Text className="text-white/50">벌칙을 받은 멤버가 없어요! 🎉</Text>
+                  <Text className="text-white/50">벌칙을 받은 수감자가 없어요! 🎉</Text>
                 </View>
               )}
             </View>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Alert, ActivityIndicator, Image, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Pressable, Alert, ActivityIndicator, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ChevronLeft } from 'lucide-react-native';
@@ -29,6 +29,7 @@ const PROFILE_OPTIONS = [
 export default function JoinRoom() {
   const router = useRouter();
   const { code } = useLocalSearchParams<{ code: string }>();
+  const insets = useSafeAreaInsets();
   
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const me = useAuthStore((state) => state.me);
@@ -98,7 +99,7 @@ export default function JoinRoom() {
 
   if (isRoomLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#050816] items-center justify-center">
+      <SafeAreaView className="flex-1 bg-[#050816] items-center justify-center" edges={['top', 'left', 'right']}>
         <ActivityIndicator size="large" color="#7c3aed" />
         <Text className="text-white/50 mt-4">방 정보를 불러오는 중...</Text>
       </SafeAreaView>
@@ -107,7 +108,7 @@ export default function JoinRoom() {
 
   if (isRoomInvalid) {
     return (
-      <SafeAreaView className="flex-1 bg-[#050816]">
+      <SafeAreaView className="flex-1 bg-[#050816]" edges={['top', 'left', 'right']}>
         <View className="flex-row items-center px-4 py-3">
           <Pressable onPress={() => router.replace('/')} className="p-2">
             <ChevronLeft color="white" size={28} />
@@ -117,6 +118,8 @@ export default function JoinRoom() {
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-white text-base font-bold mb-2">존재하지 않거나 종료된 방이에요.</Text>
           <Text className="text-white/50 text-sm mb-6">방 코드를 다시 확인해주세요.</Text>
+        </View>
+        <View className="px-6 pt-2 bg-[#050816]" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <Button
             title="홈으로"
             variant="primary"
@@ -129,68 +132,74 @@ export default function JoinRoom() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#050816]">
-      <View className="flex-row items-center px-4 py-3 border-b border-white/10">
-        <Pressable onPress={() => router.back()} className="p-2">
-          <ChevronLeft color="white" size={28} />
-        </Pressable>
-        <Text className="text-white text-lg font-bold ml-2">방 입장하기</Text>
-      </View>
-
-      {/* 💡 contentContainerStyle로 ScrollView 내부 여유 공간 확보 */}
-      <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 20 }}>
-        <Input
-          label="내 닉네임"
-          placeholder="방에서 사용할 닉네임을 입력해주세요"
-          maxLength={10}
-          maxLengthIndicator
-          value={nickname}
-          onChangeText={setNickname}
-        />
-
-        <View className="gap-3 mt-6">
-          <Text className="text-white/85 font-bold text-[15px]">프로필 선택</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible pb-2">
-            <View className="flex-row gap-3 pr-4">
-              {PROFILE_OPTIONS.map((opt, index) => (
-                <Pressable
-                  key={opt.key}
-                  onPress={() => setSelectedProfile(index)}
-                  className={`w-16 h-16 rounded-full items-center justify-center bg-[#1A1A2E] border-2 ${
-                    selectedProfile === index ? 'border-[#8B5CF6]' : 'border-transparent'
-                  }`}
-                >
-                  <Image source={opt.src} className="w-14 h-14 rounded-full" resizeMode="cover" />
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
+    <SafeAreaView className="flex-1 bg-[#050816]" edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View className="flex-row items-center px-4 py-3 border-b border-white/10">
+          <Pressable onPress={() => router.back()} className="p-2">
+            <ChevronLeft color="white" size={28} />
+          </Pressable>
+          <Text className="text-white text-lg font-bold ml-2">방 입장하기</Text>
         </View>
 
-        {!isHost && (
-          <View className="mt-6">
-            <Input
-              label="방 비밀번호"
-              placeholder="비밀번호를 입력해주세요"
-              isPassword
-              maxLength={12}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <Text className="text-[#6B7280] text-xs ml-1 mt-1">· 비밀번호는 4~12자이어야 합니다.</Text>
-          </View>
-        )}
-      </ScrollView>
+        <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
+          <Input
+            label="내 닉네임"
+            placeholder="방에서 사용할 닉네임을 입력해주세요"
+            maxLength={10}
+            maxLengthIndicator
+            value={nickname}
+            onChangeText={setNickname}
+          />
 
-      {/* 💡 하단 버튼 고정 영역 */}
-      <View className="px-6 pb-4 pt-2 bg-[#050816]">
-        <Button
-          title="입장하기"
-          disabled={!isValid || joinMutation.isPending}
-          isLoading={joinMutation.isPending}
-          onPress={handleSubmit}
-        />
-      </View>
+          <View className="gap-3 mt-6">
+            <Text className="text-white/85 font-bold text-[15px]">프로필 선택</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible pb-2">
+              <View className="flex-row gap-3 pr-4">
+                {PROFILE_OPTIONS.map((opt, index) => (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() => setSelectedProfile(index)}
+                    className={`w-16 h-16 rounded-full items-center justify-center bg-[#1A1A2E] border-2 ${
+                      selectedProfile === index ? 'border-[#8B5CF6]' : 'border-transparent'
+                    }`}
+                  >
+                    <Image source={opt.src} className="w-14 h-14 rounded-full" resizeMode="cover" />
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
+          {!isHost && (
+            <View className="mt-6">
+              <Input
+                label="방 비밀번호"
+                placeholder="비밀번호를 입력해주세요"
+                isPassword
+                maxLength={12}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <Text className="text-[#6B7280] text-xs ml-1 mt-1">· 비밀번호는 4~12자이어야 합니다.</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        <View 
+          className="px-6 pt-2 bg-[#050816]"
+          style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        >
+          <Button
+            title="입장하기"
+            disabled={!isValid || joinMutation.isPending}
+            isLoading={joinMutation.isPending}
+            onPress={handleSubmit}
+          />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

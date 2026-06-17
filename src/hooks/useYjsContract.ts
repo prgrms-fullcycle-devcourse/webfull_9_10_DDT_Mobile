@@ -83,8 +83,7 @@ export function useYjsContract(
 
   const [isConnected, setIsConnected] = useState(false);
   
-  // 💡 1. 여기서 기본값을 25, 5, 4로 시작합니다.
-  const [fields, setFields] = useState<ContractFields>({ focusMin: 25, breakMin: 5, rounds: 4 });
+  const [fields, setFields] = useState<ContractFields>({ focusMin: 1, breakMin: 1, rounds: 1 });
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [fieldOwners, setFieldOwners] = useState<Record<string, FocusedField>>({});
@@ -99,7 +98,7 @@ export function useYjsContract(
     const yjsTiers = doc.getArray<Tier>('tiers');
     const yjsPenalties = doc.getArray<Penalty>('penalties');
 
-    const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:8080';
+    const apiDomain = process.env.EXPO_PUBLIC_API_URL?.replace(/^http/, 'ws');
     
     const initYjs = async () => {
       const token = await getToken() ?? '';

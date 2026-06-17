@@ -198,6 +198,20 @@ export default function Terms() {
             onNavigationStateChange={handleNavigationStateChange} 
             incognito={true}
             userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.warn('WebView error: ', nativeEvent);
+              setShowWebView(false);
+              setIsLoading(false);
+              Toast.show({ type: 'error', text1: '오류', text2: '로그인 페이지를 불러오지 못했어요.' });
+            }}
+            onHttpError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.warn('WebView HTTP error: ', nativeEvent.statusCode);
+              setShowWebView(false);
+              setIsLoading(false);
+              Toast.show({ type: 'error', text1: '오류', text2: '서버와 연결할 수 없어요.' });
+            }}
           />
         </SafeAreaView>
       </Modal>

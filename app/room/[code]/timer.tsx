@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, Modal, AppState, Platform, Alert } from 'react-native';
+import { View, Text, Modal, AppState, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device'; 
+import { useKeepAwake } from 'expo-keep-awake';
+import Toast from 'react-native-toast-message';
 
 import { useSocket } from '../../../src/contexts/SocketContext';
 import { useAuthStore } from '../../../src/store/useAuthStore';
@@ -26,6 +28,8 @@ const formatEscapeTime = (ms: number) => {
 };
 
 export default function TimerScreen() {
+  useKeepAwake(); // 화면 꺼짐 방지
+
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
   const socket = useSocket();
@@ -72,6 +76,7 @@ export default function TimerScreen() {
   useEffect(() => {
     const myMember = me ? members[me.id] : undefined;
     if (myMember?.gaveUpAt) {
+      Toast.show({ type: 'error', text1: '이미 탈옥한 방이에요.' });
       router.replace(`/room/${code}/roulette?from=giveup`);
     }
   }, [me, members, code, router]);
@@ -92,6 +97,7 @@ export default function TimerScreen() {
     if (time - lastEscapeStartRef.current < 300) return;
     lastEscapeStartRef.current = time;
     socket?.emit('escape:start');
+    Toast.show({ type: 'error', text1: '방을 이탈했어요!', text2: '이탈 시간이 누적돼요.', position: 'top' });
   }, [socket]);
 
   useEffect(() => {
@@ -128,13 +134,14 @@ export default function TimerScreen() {
     mutationFn: async () => (await getTimerApi(axiosClient).timerControllerGiveUp(code!)).data,
     onSuccess: () => {
       setIsModalOpen(false);
-      Alert.alert('포기 완료', '중도 포기 처리되었습니다.');
+      Toast.show({ type: 'error', text1: '탈옥 완료', text2: '수감 중 탈옥했습니다.' });
       router.replace(`/room/${code}/roulette?from=giveup`);
     },
-    onError: (error: any) => Alert.alert('오류', error.response?.data?.message || '처리에 실패했습니다.'),
+    onError: (error: any) => {
+      Toast.show({ type: 'error', text1: '오류', text2: error.response?.data?.message || '처리에 실패했습니다.' });
+    }
   });
 
-  // 💡 1. Early Return에 막히지 않도록 옵셔널 체이닝(?.)을 이용해 연산 에러 방지
   const focusMin = sessionInfo?.focusMin ?? 0;
   const breakMin = sessionInfo?.breakMin ?? 0;
   const serverOffset = sessionInfo?.serverOffset ?? 0;
@@ -170,7 +177,6 @@ export default function TimerScreen() {
     }).catch(()=>{});
   }
 
-  // 💡 2. Hook 위치 보정 (모든 Hook은 Early Return 보다 위에 있어야 함)
   useEffect(() => {
     let notifId: string | null = null;
     if (sessionInfo && !isFocus && (breakMin * 60) >= 60) {
@@ -189,11 +195,10 @@ export default function TimerScreen() {
     };
   }, [isFocus, round, breakMin, sessionInfo]);
 
-  // 💡 3. 모든 Hook 선언이 끝난 후 제일 마지막에 Early Return 배치
   if (!me || !sessionInfo) {
     return (
       <SafeAreaView className="flex-1 bg-[#050816] items-center justify-center">
-        <Text className="text-white">로딩 중...</Text>
+        <Text className="text-white">수감 준비 중...</Text>
       </SafeAreaView>
     );
   }
@@ -253,25 +258,26 @@ export default function TimerScreen() {
       </View>
 
       <View className="w-full px-6">
-        <Button title="중도 포기" variant="outline" onPress={() => setIsModalOpen(true)} />
+        <Button title="탈옥하기" variant="outline" onPress={() => setIsModalOpen(true)} />
       </View>
 
       <Modal visible={isModalOpen} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center items-center px-6">
           <View className="bg-[#1E2538] w-full rounded-3xl p-6">
             <Text className="text-white text-lg font-bold mb-2">
-              포기하면 남은 시간이{"\n"}모두 이탈 시간으로 처리돼요.
+              탈옥하시겠어요?
             </Text>
-            <Text className="text-white/50 text-sm mb-8">가장 많은 벌칙을 받게 됩니다.</Text>
+            <Text className="text-white/50 text-sm mb-8">탈옥하면 남은 시간이 모두 이탈 시간으로 처리돼요.</Text>
             <View className="flex-row gap-3">
-              <Button 
-                title="포기하기" variant="destructive" className="flex-1" 
-                isLoading={giveUpMutation.isPending} disabled={giveUpMutation.isPending}
-                onPress={() => giveUpMutation.mutate()} 
-              />
               <Button 
                 title="취소" variant="secondary" className="flex-1" 
                 disabled={giveUpMutation.isPending} onPress={() => setIsModalOpen(false)} 
+              />
+              <Button 
+                title={giveUpMutation.isPending ? "탈옥하는 중..." : "탈옥하기"} 
+                variant="destructive" className="flex-1" 
+                isLoading={giveUpMutation.isPending} disabled={giveUpMutation.isPending}
+                onPress={() => giveUpMutation.mutate()} 
               />
             </View>
           </View>
